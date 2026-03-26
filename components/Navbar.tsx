@@ -26,18 +26,17 @@ export default function Navbar({ userName, userRole, onLogout }: NavbarProps) {
   };
 
   return (
-    <nav className="sticky top-0 z-40 border-b border-[#E5E7EB] bg-white shadow-sm">
+    <nav className="sticky top-0 z-40 border-b border-[#222222] bg-black shadow-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         {/* Logo + Brand */}
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-2">
-            {/* Check for SVG logo, fall back to text */}
             <div className="flex items-center">
               <Image
                 src="/Shiftly-Auto.png"
                 alt="Shiftly Auto"
-                width={40}
-                height={40}
+                width={120}
+                height={48}
                 className="object-contain"
               />
             </div>
@@ -51,8 +50,8 @@ export default function Navbar({ userName, userRole, onLogout }: NavbarProps) {
                 href={tab.href}
                 className={`text-sm font-medium transition-colors relative pb-1 ${
                   isActive(tab.href)
-                    ? "text-[#1F2937]"
-                    : "text-[#6B7280] hover:text-[#1F2937]"
+                    ? "text-white"
+                    : "text-[#9CA3AF] hover:text-white"
                 }`}
               >
                 {tab.label}
@@ -67,7 +66,7 @@ export default function Navbar({ userName, userRole, onLogout }: NavbarProps) {
         {/* User Info + Logout */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-[#1F2937]/70">{userName}</span>
+            <span className="text-sm text-white/70">{userName}</span>
             <span className="rounded-full bg-[#0066FF]/20 px-2.5 py-0.5 text-xs font-medium text-[#0066FF] border border-[#0066FF]/30">
               {userRole}
             </span>
