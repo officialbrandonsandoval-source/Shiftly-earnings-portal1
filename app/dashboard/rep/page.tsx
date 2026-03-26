@@ -39,6 +39,7 @@ export default function RepDashboard() {
   const [showYTD, setShowYTD] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [tierToast, setTierToast] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("Earnings");
 
   // Deal entry modal state
   const [showDealModal, setShowDealModal] = useState(false);
@@ -56,7 +57,6 @@ export default function RepDashboard() {
 
   // Activity log state
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
-  const [showActivity, setShowActivity] = useState(false);
   const [activityForm, setActivityForm] = useState({
     log_date: new Date().toISOString().slice(0, 10),
     scheduled_calls: "",
@@ -390,14 +390,16 @@ export default function RepDashboard() {
         </div>
       )}
 
-      <Navbar 
-        userName={user.name} 
-        userRole={user.role === "rep" ? "Rep" : "Admin"} 
-        onLogout={logout} 
+      <Navbar
+        userName={user.name}
+        userRole={user.role === "rep" ? "Rep" : "Admin"}
+        onLogout={logout}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
-        {/* Month Selector */}
+        {/* Month Selector — shared across tabs */}
         <div className="flex flex-wrap items-center gap-3">
           <select
             value={selectedMonth}
@@ -420,12 +422,14 @@ export default function RepDashboard() {
           >
             YTD
           </button>
-          <button
-            onClick={handleExportCSV}
-            className="rounded-lg bg-white border border-[#E5E7EB] px-4 py-2 text-sm font-medium text-[#6B7280] hover:text-[#1F2937] transition"
-          >
-            Export CSV
-          </button>
+          {activeTab === "Deals" && (
+            <button
+              onClick={handleExportCSV}
+              className="rounded-lg bg-white border border-[#E5E7EB] px-4 py-2 text-sm font-medium text-[#6B7280] hover:text-[#1F2937] transition"
+            >
+              Export CSV
+            </button>
+          )}
           <div className="ml-auto text-sm text-[#6B7280]">
             {showYTD
               ? `Year to Date ${selectedMonth.slice(0, 4)}`
@@ -433,112 +437,115 @@ export default function RepDashboard() {
           </div>
         </div>
 
-        {/* Earnings Graph */}
-        <EarningsGraph deals={periodDeals} getCommission={getCommission} />
+        {/* ===== EARNINGS TAB ===== */}
+        {activeTab === "Earnings" && (
+          <>
+            {/* Earnings Graph */}
+            <EarningsGraph deals={periodDeals} getCommission={getCommission} />
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <SummaryCard label="My MRR Sold" value={formatCurrency(stats.totalMrr)} />
-          <SummaryCard label="My Setup Collected" value={formatCurrency(stats.totalSetup)} />
-          <SummaryCard label="My Total Commission" value={formatCurrency(stats.totalCommission)} highlight />
-          <SummaryCard label="My Deal Count" value={String(stats.dealCount)} />
-        </div>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <SummaryCard label="My MRR Sold" value={formatCurrency(stats.totalMrr)} />
+              <SummaryCard label="My Setup Collected" value={formatCurrency(stats.totalSetup)} />
+              <SummaryCard label="My Total Commission" value={formatCurrency(stats.totalCommission)} highlight />
+              <SummaryCard label="My Deal Count" value={String(stats.dealCount)} />
+            </div>
 
-        {/* Tier Progress */}
-        {payStructure && tierInfo && (
-          <div className="rounded-xl bg-white border border-[#E5E7EB] p-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider">
-                Tier Progress
-              </h3>
-              <span className="text-sm font-medium text-[#0066FF]">
-                {tierInfo.tier}
-              </span>
-            </div>
-            <div className="relative h-4 rounded-full bg-[#F9FAFB] overflow-hidden mb-3">
-              <div
-                className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#0066FF] to-[#2563EB] transition-all duration-700 ease-out"
-                style={{ width: `${tierProgress.percent}%` }}
-              />
-              {tierProgress.t1 > 0 && tierProgress.t2 > 0 && (
-                <div
-                  className="absolute top-0 bottom-0 w-px bg-[#94A3B8]/40"
-                  style={{ left: `${(tierProgress.t1 / tierProgress.t2) * 100}%` }}
-                />
-              )}
-            </div>
-            <div className="flex items-center justify-between text-xs text-[#6B7280]">
-              <span>{formatCurrency(repMonthlyMrr)} MRR</span>
-              <span>
-                {tierInfo.tier === "Tier 2" ? (
-                  <span className="text-[#10B981] font-medium">
-                    Tier 2 reached! +{((payStructure.tier2_bonus_rate ?? 0) * 100).toFixed(0)}% bonus
+            {/* Tier Progress */}
+            {payStructure && tierInfo && (
+              <div className="rounded-xl bg-white border border-[#E5E7EB] p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider">
+                    Tier Progress
+                  </h3>
+                  <span className="text-sm font-medium text-[#0066FF]">
+                    {tierInfo.tier}
                   </span>
-                ) : tierInfo.tier === "Tier 1" ? (
-                  <>
-                    Tier 1 reached!{" "}
-                    {tierInfo.nextTier && (
-                      <span className="text-[#0066FF]">
-                        {formatCurrency(tierInfo.amountToNext)} away from Tier 2
-                      </span>
-                    )}
-                  </>
-                ) : tierInfo.nextTier ? (
+                </div>
+                <div className="relative h-4 rounded-full bg-[#F9FAFB] overflow-hidden mb-3">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#0066FF] to-[#2563EB] transition-all duration-700 ease-out"
+                    style={{ width: `${tierProgress.percent}%` }}
+                  />
+                  {tierProgress.t1 > 0 && tierProgress.t2 > 0 && (
+                    <div
+                      className="absolute top-0 bottom-0 w-px bg-[#94A3B8]/40"
+                      style={{ left: `${(tierProgress.t1 / tierProgress.t2) * 100}%` }}
+                    />
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-xs text-[#6B7280]">
+                  <span>{formatCurrency(repMonthlyMrr)} MRR</span>
                   <span>
-                    {formatCurrency(tierInfo.amountToNext)} away from {tierInfo.nextTier}
-                    {tierInfo.nextTier === "Tier 1" && payStructure.tier1_bonus_rate &&
-                      ` (+${(payStructure.tier1_bonus_rate * 100).toFixed(0)}%)`}
+                    {tierInfo.tier === "Tier 2" ? (
+                      <span className="text-[#10B981] font-medium">
+                        Tier 2 reached! +{((payStructure.tier2_bonus_rate ?? 0) * 100).toFixed(0)}% bonus
+                      </span>
+                    ) : tierInfo.tier === "Tier 1" ? (
+                      <>
+                        Tier 1 reached!{" "}
+                        {tierInfo.nextTier && (
+                          <span className="text-[#0066FF]">
+                            {formatCurrency(tierInfo.amountToNext)} away from Tier 2
+                          </span>
+                        )}
+                      </>
+                    ) : tierInfo.nextTier ? (
+                      <span>
+                        {formatCurrency(tierInfo.amountToNext)} away from {tierInfo.nextTier}
+                        {tierInfo.nextTier === "Tier 1" && payStructure.tier1_bonus_rate &&
+                          ` (+${(payStructure.tier1_bonus_rate * 100).toFixed(0)}%)`}
+                      </span>
+                    ) : "No tier thresholds"}
                   </span>
-                ) : "No tier thresholds"}
-              </span>
-            </div>
-            {(tierProgress.t1 > 0 || tierProgress.t2 > 0) && (
-              <div className="flex items-center gap-4 mt-2 text-xs text-[#6B7280]/60">
-                {tierProgress.t1 > 0 && <span>Tier 1: {formatCurrency(tierProgress.t1)}</span>}
-                {tierProgress.t2 > 0 && <span>Tier 2: {formatCurrency(tierProgress.t2)}</span>}
+                </div>
+                {(tierProgress.t1 > 0 || tierProgress.t2 > 0) && (
+                  <div className="flex items-center gap-4 mt-2 text-xs text-[#6B7280]/60">
+                    {tierProgress.t1 > 0 && <span>Tier 1: {formatCurrency(tierProgress.t1)}</span>}
+                    {tierProgress.t2 > 0 && <span>Tier 2: {formatCurrency(tierProgress.t2)}</span>}
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Deals Tables */}
-        {fetchLoading ? (
-          <div className="text-center py-12 text-[#6B7280] text-sm">Loading deals...</div>
-        ) : periodDeals.length === 0 ? (
-          <div className="rounded-xl bg-white border border-[#E5E7EB] p-12 text-center">
-            <p className="text-[#6B7280] text-sm">No deals found for this period.</p>
-          </div>
-        ) : (
-          <>
-            <DealsSection
-              title="Front of Month (1st-15th)"
-              deals={firstHalfDeals}
-              dealCommissions={dealCommissions}
-              expandedRows={expandedRows}
-              onToggleRow={toggleRow}
-            />
-            <DealsSection
-              title="Back of Month (16th-End)"
-              deals={backHalfDeals}
-              dealCommissions={dealCommissions}
-              expandedRows={expandedRows}
-              onToggleRow={toggleRow}
-            />
           </>
         )}
 
-        {/* Daily Activity Section */}
-        <div className="rounded-xl bg-white border border-[#E5E7EB] overflow-hidden">
-          <button
-            onClick={() => setShowActivity(!showActivity)}
-            className="w-full px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between hover:bg-[#F9FAFB] transition"
-          >
-            <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider">Daily Activity</h3>
-            <span className="text-[#6B7280] text-xs">{showActivity ? "Collapse" : "Expand"}</span>
-          </button>
-          {showActivity && (
-            <div className="p-6 space-y-6">
-              {/* Activity Form */}
+        {/* ===== DEALS TAB ===== */}
+        {activeTab === "Deals" && (
+          <>
+            {fetchLoading ? (
+              <div className="text-center py-12 text-[#6B7280] text-sm">Loading deals...</div>
+            ) : periodDeals.length === 0 ? (
+              <div className="rounded-xl bg-white border border-[#E5E7EB] p-12 text-center">
+                <p className="text-[#6B7280] text-sm">No deals found for this period.</p>
+              </div>
+            ) : (
+              <>
+                <DealsSection
+                  title="Front of Month (1st-15th)"
+                  deals={firstHalfDeals}
+                  dealCommissions={dealCommissions}
+                  expandedRows={expandedRows}
+                  onToggleRow={toggleRow}
+                />
+                <DealsSection
+                  title="Back of Month (16th-End)"
+                  deals={backHalfDeals}
+                  dealCommissions={dealCommissions}
+                  expandedRows={expandedRows}
+                  onToggleRow={toggleRow}
+                />
+              </>
+            )}
+          </>
+        )}
+
+        {/* ===== ACTIVITY LOG TAB ===== */}
+        {activeTab === "Activity Log" && (
+          <div className="space-y-6">
+            {/* Activity Form */}
+            <div className="rounded-xl bg-white border border-[#E5E7EB] p-6">
+              <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-4">Log Daily Activity</h3>
               <form onSubmit={handleActivitySubmit} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
                 <div>
                   <label className="block text-xs text-[#6B7280] mb-1">Date</label>
@@ -615,42 +622,85 @@ export default function RepDashboard() {
                   </button>
                 </div>
               </form>
-
-              {/* This Week's Activity Table */}
-              {thisWeekActivity.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-medium text-[#6B7280] uppercase tracking-wider mb-2">This Week</h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] text-left text-xs">
-                          <th className="px-4 py-2">Date</th>
-                          <th className="px-4 py-2 text-right">Scheduled</th>
-                          <th className="px-4 py-2 text-right">Shown</th>
-                          <th className="px-4 py-2 text-right">Sold</th>
-                          <th className="px-4 py-2 text-right">Revenue</th>
-                          <th className="px-4 py-2 text-right">No Shows</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {thisWeekActivity.map((log, i) => (
-                          <tr key={log.id} className={`${i % 2 === 0 ? "bg-[#F9FAFB]/40" : "bg-white/40"} border-b border-[#E5E7EB]/30 hover:bg-[#F9FAFB]/60 transition`}>
-                            <td className="px-4 py-2 text-[#6B7280]">{formatDate(log.log_date)}</td>
-                            <td className="px-4 py-2 text-right text-[#1F2937]">{log.scheduled_calls}</td>
-                            <td className="px-4 py-2 text-right text-[#1F2937]">{log.shown_calls}</td>
-                            <td className="px-4 py-2 text-right text-[#1F2937]">{log.sold_deals}</td>
-                            <td className="px-4 py-2 text-right text-[#1F2937]">{formatCurrency(log.revenue_collected)}</td>
-                            <td className="px-4 py-2 text-right text-[#1F2937]">{log.no_shows}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
             </div>
-          )}
-        </div>
+
+            {/* This Week's Activity Table */}
+            {thisWeekActivity.length > 0 && (
+              <div className="rounded-xl bg-white border border-[#E5E7EB] overflow-hidden">
+                <div className="px-6 py-4 border-b border-[#E5E7EB]">
+                  <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider">This Week</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] text-left text-xs">
+                        <th className="px-4 py-2">Date</th>
+                        <th className="px-4 py-2 text-right">Scheduled</th>
+                        <th className="px-4 py-2 text-right">Shown</th>
+                        <th className="px-4 py-2 text-right">Sold</th>
+                        <th className="px-4 py-2 text-right">Revenue</th>
+                        <th className="px-4 py-2 text-right">No Shows</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {thisWeekActivity.map((log, i) => (
+                        <tr key={log.id} className={`${i % 2 === 0 ? "bg-[#F9FAFB]/40" : "bg-white/40"} border-b border-[#E5E7EB]/30 hover:bg-[#F9FAFB]/60 transition`}>
+                          <td className="px-4 py-2 text-[#6B7280]">{formatDate(log.log_date)}</td>
+                          <td className="px-4 py-2 text-right text-[#1F2937]">{log.scheduled_calls}</td>
+                          <td className="px-4 py-2 text-right text-[#1F2937]">{log.shown_calls}</td>
+                          <td className="px-4 py-2 text-right text-[#1F2937]">{log.sold_deals}</td>
+                          <td className="px-4 py-2 text-right text-[#1F2937]">{formatCurrency(log.revenue_collected)}</td>
+                          <td className="px-4 py-2 text-right text-[#1F2937]">{log.no_shows}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* All Activity Logs */}
+            {activityLogs.length > 0 && (
+              <div className="rounded-xl bg-white border border-[#E5E7EB] overflow-hidden">
+                <div className="px-6 py-4 border-b border-[#E5E7EB]">
+                  <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider">All Activity</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] text-left text-xs">
+                        <th className="px-4 py-2">Date</th>
+                        <th className="px-4 py-2 text-right">Scheduled</th>
+                        <th className="px-4 py-2 text-right">Shown</th>
+                        <th className="px-4 py-2 text-right">Sold</th>
+                        <th className="px-4 py-2 text-right">Revenue</th>
+                        <th className="px-4 py-2 text-right">No Shows</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activityLogs.map((log, i) => (
+                        <tr key={log.id} className={`${i % 2 === 0 ? "bg-[#F9FAFB]/40" : "bg-white/40"} border-b border-[#E5E7EB]/30 hover:bg-[#F9FAFB]/60 transition`}>
+                          <td className="px-4 py-2 text-[#6B7280]">{formatDate(log.log_date)}</td>
+                          <td className="px-4 py-2 text-right text-[#1F2937]">{log.scheduled_calls}</td>
+                          <td className="px-4 py-2 text-right text-[#1F2937]">{log.shown_calls}</td>
+                          <td className="px-4 py-2 text-right text-[#1F2937]">{log.sold_deals}</td>
+                          <td className="px-4 py-2 text-right text-[#1F2937]">{formatCurrency(log.revenue_collected)}</td>
+                          <td className="px-4 py-2 text-right text-[#1F2937]">{log.no_shows}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activityLogs.length === 0 && thisWeekActivity.length === 0 && (
+              <div className="rounded-xl bg-white border border-[#E5E7EB] p-12 text-center">
+                <p className="text-[#6B7280] text-sm">No activity logged yet. Use the form above to log your daily activity.</p>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* FAB - Log a Deal */}

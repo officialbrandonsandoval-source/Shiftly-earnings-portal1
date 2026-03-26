@@ -1,64 +1,50 @@
 "use client";
 
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
 
 interface NavbarProps {
   userName: string;
   userRole: string;
   onLogout: () => void;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export default function Navbar({ userName, userRole, onLogout }: NavbarProps) {
-  const pathname = usePathname();
+const TABS = ["Earnings", "Deals", "Activity Log"];
 
-  const tabs = [
-    { label: "Earnings", href: "/" },
-    { label: "Deals", href: "/#deals" },
-    { label: "Activity Log", href: "/#activity" },
-    { label: "Settings", href: "/settings" },
-  ];
-
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href.split("#")[0]);
-  };
-
+export default function Navbar({ userName, userRole, onLogout, activeTab = "Earnings", onTabChange }: NavbarProps) {
   return (
-    <nav className="sticky top-0 z-40 border-b border-[#222222] bg-black shadow-sm">
+    <nav className="sticky top-0 z-40 bg-black">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         {/* Logo + Brand */}
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center">
-              <Image
-                src="/Shiftly-Auto.png"
-                alt="Shiftly Auto"
-                width={120}
-                height={48}
-                className="object-contain"
-              />
-            </div>
+        <div className="flex items-center gap-10">
+          <div className="flex items-center">
+            <Image
+              src="/Shiftly-Auto.png"
+              alt="Shiftly Auto"
+              width={160}
+              height={56}
+              className="object-contain"
+            />
           </div>
 
           {/* Navigation Tabs */}
           <div className="hidden sm:flex items-center gap-6">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.href}
-                href={tab.href}
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => onTabChange?.(tab)}
                 className={`text-sm font-medium transition-colors relative pb-1 ${
-                  isActive(tab.href)
+                  activeTab === tab
                     ? "text-white"
                     : "text-[#9CA3AF] hover:text-white"
                 }`}
               >
-                {tab.label}
-                {isActive(tab.href) && (
+                {tab}
+                {activeTab === tab && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0066FF]" />
                 )}
-              </Link>
+              </button>
             ))}
           </div>
         </div>
