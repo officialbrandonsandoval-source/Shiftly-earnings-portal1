@@ -32,8 +32,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#FFFFFF]">
       <div className="w-full max-w-sm mx-4">
         <div className="bg-[#FFFFFF] rounded-2xl shadow-lg overflow-hidden border border-[#E5E7EB]">
-          {/* Logo header — black background matching Shiftly brand */}
-          <div className="bg-black flex items-center justify-center py-8 px-8">
+          {/* Logo header — white background matching Shiftly brand */}
+          <div className="bg-white flex items-center justify-center py-8 px-8 border-b border-[#E5E7EB]">
             <Image
               src="/Shiftly-Auto.png"
               alt="Shiftly Auto"

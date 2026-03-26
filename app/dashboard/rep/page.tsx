@@ -415,14 +415,14 @@ export default function RepDashboard() {
             className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
               showYTD
                 ? "bg-[#0066FF] border-[#0066FF] text-white"
-                : "bg-white border-[#E5E7EB] text-[#6B7280] hover:text-[#FFFFFF]"
+                : "bg-white border-[#E5E7EB] text-[#6B7280] hover:text-[#1F2937]"
             }`}
           >
             YTD
           </button>
           <button
             onClick={handleExportCSV}
-            className="rounded-lg bg-white border border-[#E5E7EB] px-4 py-2 text-sm font-medium text-[#6B7280] hover:text-[#FFFFFF] transition"
+            className="rounded-lg bg-white border border-[#E5E7EB] px-4 py-2 text-sm font-medium text-[#6B7280] hover:text-[#1F2937] transition"
           >
             Export CSV
           </button>
@@ -546,7 +546,7 @@ export default function RepDashboard() {
                     type="date"
                     value={activityForm.log_date}
                     onChange={(e) => setActivityForm({ ...activityForm, log_date: e.target.value })}
-                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]"
+                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF]"
                   />
                 </div>
                 <div>
@@ -557,7 +557,7 @@ export default function RepDashboard() {
                     placeholder="0"
                     value={activityForm.scheduled_calls}
                     onChange={(e) => setActivityForm({ ...activityForm, scheduled_calls: e.target.value })}
-                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]"
+                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF]"
                   />
                 </div>
                 <div>
@@ -568,7 +568,7 @@ export default function RepDashboard() {
                     placeholder="0"
                     value={activityForm.shown_calls}
                     onChange={(e) => setActivityForm({ ...activityForm, shown_calls: e.target.value })}
-                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]"
+                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF]"
                   />
                 </div>
                 <div>
@@ -579,7 +579,7 @@ export default function RepDashboard() {
                     placeholder="0"
                     value={activityForm.sold_deals}
                     onChange={(e) => setActivityForm({ ...activityForm, sold_deals: e.target.value })}
-                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]"
+                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF]"
                   />
                 </div>
                 <div>
@@ -591,7 +591,7 @@ export default function RepDashboard() {
                     placeholder="0"
                     value={activityForm.revenue_collected}
                     onChange={(e) => setActivityForm({ ...activityForm, revenue_collected: e.target.value })}
-                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]"
+                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF]"
                   />
                 </div>
                 <div>
@@ -602,7 +602,7 @@ export default function RepDashboard() {
                     placeholder="0"
                     value={activityForm.no_shows}
                     onChange={(e) => setActivityForm({ ...activityForm, no_shows: e.target.value })}
-                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]"
+                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF]"
                   />
                 </div>
                 <div className="flex items-end">
@@ -636,11 +636,11 @@ export default function RepDashboard() {
                         {thisWeekActivity.map((log, i) => (
                           <tr key={log.id} className={`${i % 2 === 0 ? "bg-[#F9FAFB]/40" : "bg-white/40"} border-b border-[#E5E7EB]/30 hover:bg-[#F9FAFB]/60 transition`}>
                             <td className="px-4 py-2 text-[#6B7280]">{formatDate(log.log_date)}</td>
-                            <td className="px-4 py-2 text-right text-white">{log.scheduled_calls}</td>
-                            <td className="px-4 py-2 text-right text-white">{log.shown_calls}</td>
-                            <td className="px-4 py-2 text-right text-white">{log.sold_deals}</td>
-                            <td className="px-4 py-2 text-right text-white">{formatCurrency(log.revenue_collected)}</td>
-                            <td className="px-4 py-2 text-right text-white">{log.no_shows}</td>
+                            <td className="px-4 py-2 text-right text-[#1F2937]">{log.scheduled_calls}</td>
+                            <td className="px-4 py-2 text-right text-[#1F2937]">{log.shown_calls}</td>
+                            <td className="px-4 py-2 text-right text-[#1F2937]">{log.sold_deals}</td>
+                            <td className="px-4 py-2 text-right text-[#1F2937]">{formatCurrency(log.revenue_collected)}</td>
+                            <td className="px-4 py-2 text-right text-[#1F2937]">{log.no_shows}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -677,8 +677,8 @@ export default function RepDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowDealModal(false)}>
           <div className="bg-white border border-[#E5E7EB] rounded-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Log a Deal</h2>
-              <button onClick={() => setShowDealModal(false)} className="text-[#6B7280] hover:text-white text-xl">&times;</button>
+              <h2 className="text-lg font-semibold text-[#1F2937]">Log a Deal</h2>
+              <button onClick={() => setShowDealModal(false)} className="text-[#6B7280] hover:text-[#1F2937] text-xl">&times;</button>
             </div>
             <form onSubmit={handleDealSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -689,7 +689,7 @@ export default function RepDashboard() {
                     required
                     value={dealForm.deal_date}
                     onChange={(e) => setDealForm({ ...dealForm, deal_date: e.target.value })}
-                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]"
+                    className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF]"
                   />
                 </div>
                 <div className="flex items-end">
@@ -699,17 +699,6 @@ export default function RepDashboard() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-[#6B7280] mb-1">Dealer Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="ABC Motors"
-                  value={dealForm.dealer_name}
-                  onChange={(e) => setDealForm({ ...dealForm, dealer_name: e.target.value })}
-                  className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF] placeholder:text-[#6B7280]/40"
-                />
-              </div>
-              <div>
                 <label className="block text-xs text-[#6B7280] mb-1">Client Name</label>
                 <input
                   type="text"
@@ -717,15 +706,26 @@ export default function RepDashboard() {
                   placeholder="John Smith"
                   value={dealForm.client_name}
                   onChange={(e) => setDealForm({ ...dealForm, client_name: e.target.value })}
-                  className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF] placeholder:text-[#6B7280]/40"
+                  className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF] placeholder:text-[#6B7280]/40"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[#6B7280] mb-1">Product</label>
+                <label className="block text-xs text-[#6B7280] mb-1">Dealer Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ABC Motors"
+                  value={dealForm.dealer_name}
+                  onChange={(e) => setDealForm({ ...dealForm, dealer_name: e.target.value })}
+                  className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF] placeholder:text-[#6B7280]/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-[#6B7280] mb-1">What They Purchased</label>
                 <select
                   value={dealForm.product}
                   onChange={(e) => setDealForm({ ...dealForm, product: e.target.value as ProductType })}
-                  className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]"
+                  className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF]"
                 >
                   <option value="Tool">Tool</option>
                   <option value="Ads">Ads</option>
@@ -735,7 +735,7 @@ export default function RepDashboard() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-[#6B7280] mb-1">Monthly Price</label>
+                  <label className="block text-xs text-[#6B7280] mb-1">How Much (Monthly)</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] text-sm">$</span>
                     <input
@@ -746,12 +746,12 @@ export default function RepDashboard() {
                       placeholder="0.00"
                       value={dealForm.monthly_price}
                       onChange={(e) => setDealForm({ ...dealForm, monthly_price: e.target.value })}
-                      className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] pl-7 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF] placeholder:text-[#6B7280]/40"
+                      className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] pl-7 pr-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF] placeholder:text-[#6B7280]/40"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#6B7280] mb-1">Setup Fee</label>
+                  <label className="block text-xs text-[#6B7280] mb-1">Onboarding Fee</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] text-sm">$</span>
                     <input
@@ -761,17 +761,17 @@ export default function RepDashboard() {
                       placeholder="0.00"
                       value={dealForm.setup_fee}
                       onChange={(e) => setDealForm({ ...dealForm, setup_fee: e.target.value })}
-                      className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] pl-7 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF] placeholder:text-[#6B7280]/40"
+                      className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] pl-7 pr-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF] placeholder:text-[#6B7280]/40"
                     />
                   </div>
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-[#6B7280] mb-1">Term</label>
+                <label className="block text-xs text-[#6B7280] mb-1">Service Length</label>
                 <select
                   value={dealForm.term}
                   onChange={(e) => setDealForm({ ...dealForm, term: e.target.value })}
-                  className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]"
+                  className="w-full rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2 text-sm text-[#1F2937] focus:outline-none focus:border-[#0066FF]"
                 >
                   <option value="1">1 month</option>
                   <option value="3">3 months</option>
@@ -785,9 +785,9 @@ export default function RepDashboard() {
                 <div className="rounded-lg bg-[#F9FAFB] border border-[#0066FF]/30 p-4">
                   <p className="text-xs font-medium text-[#0066FF] uppercase tracking-wider mb-2">Commission Preview</p>
                   <div className="flex items-center gap-4 text-sm">
-                    <span className="text-[#6B7280]">MRR <span className="text-white font-medium">{formatCurrency(dealPreview.mrrCommission)}</span></span>
+                    <span className="text-[#6B7280]">MRR <span className="text-[#1F2937] font-medium">{formatCurrency(dealPreview.mrrCommission)}</span></span>
                     <span className="text-[#6B7280]">+</span>
-                    <span className="text-[#6B7280]">Setup <span className="text-white font-medium">{formatCurrency(dealPreview.setupCommission)}</span></span>
+                    <span className="text-[#6B7280]">Setup <span className="text-[#1F2937] font-medium">{formatCurrency(dealPreview.setupCommission)}</span></span>
                     <span className="text-[#6B7280]">=</span>
                     <span className="text-[#0066FF] font-bold text-lg">{formatCurrency(dealPreview.total)}</span>
                   </div>
@@ -820,7 +820,7 @@ function SummaryCard({ label, value, highlight }: { label: string; value: string
       <div className="absolute top-0 left-0 w-[2px] h-full bg-gradient-to-b from-[#0066FF] to-transparent opacity-60" />
       
       <p className="text-xs font-medium text-[#6B7280] uppercase tracking-wider mb-2">{label}</p>
-      <p className={`text-2xl font-bold ${highlight ? "text-[#0066FF]" : "text-[#FFFFFF]"}`}>{value}</p>
+      <p className={`text-2xl font-bold ${highlight ? "text-[#0066FF]" : "text-[#1F2937]"}`}>{value}</p>
     </div>
   );
 }
@@ -898,15 +898,15 @@ function DealRow({
         className={`${rowBg} border-b border-[#E5E7EB]/50 hover:bg-[#F9FAFB] transition cursor-pointer`}
       >
         <td className="px-6 py-3 text-[#6B7280] whitespace-nowrap">{formatDate(deal.date)}</td>
-        <td className="px-6 py-3 text-[#FFFFFF] font-medium">{deal.client}</td>
+        <td className="px-6 py-3 text-[#1F2937] font-medium">{deal.client}</td>
         <td className="px-6 py-3 text-[#6B7280]">{deal.dealer}</td>
         <td className="px-6 py-3">
           <span className="inline-flex rounded-full bg-[#0066FF]/10 border border-[#0066FF]/20 px-2.5 py-0.5 text-xs font-medium text-[#0066FF]">
             {deal.product}
           </span>
         </td>
-        <td className="px-6 py-3 text-right text-[#FFFFFF]">{formatCurrency(deal.monthly_price)}</td>
-        <td className="px-6 py-3 text-right text-[#FFFFFF]">{formatCurrency(deal.setup_fee)}</td>
+        <td className="px-6 py-3 text-right text-[#1F2937]">{formatCurrency(deal.monthly_price)}</td>
+        <td className="px-6 py-3 text-right text-[#1F2937]">{formatCurrency(deal.setup_fee)}</td>
         <td className="px-6 py-3 text-right text-[#6B7280]">{deal.term}mo</td>
         <td className="px-6 py-3 text-right text-[#6B7280]">
           {commission ? formatCurrency(commission.mrrCommission) : "-"}
@@ -922,7 +922,7 @@ function DealRow({
         <tr className="bg-[#F9FAFB]">
           <td colSpan={10} className="px-6 py-3">
             <p className="text-xs text-[#6B7280]">
-              <span className="font-medium text-[#FFFFFF]">Breakdown:</span> {commission.breakdown}
+              <span className="font-medium text-[#1F2937]">Breakdown:</span> {commission.breakdown}
             </p>
           </td>
         </tr>
