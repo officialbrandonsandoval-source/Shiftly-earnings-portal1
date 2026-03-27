@@ -301,7 +301,7 @@ export default function AdminPayStructurePage() {
                     <th className="pb-3 font-medium">Email</th>
                     <th className="pb-3 font-medium">Role</th>
                     <th className="pb-3 font-medium">Pay Structure</th>
-                    <th className="pb-3 font-medium">Sheet Tab</th>
+                    <th className="pb-3 font-medium">Google Sheet</th>
                     <th className="pb-3 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
@@ -327,7 +327,15 @@ export default function AdminPayStructurePage() {
                         </span>
                       </td>
                       <td className="py-3 text-[#6b7280]">{getStructureName(rep.pay_structure_id)}</td>
-                      <td className="py-3 text-[#6b7280]">{rep.sheet_tab || <span className="text-[#9ca3af] italic">Not set</span>}</td>
+                      <td className="py-3 text-[#6b7280] max-w-[200px] truncate">
+                        {rep.sheet_tab ? (
+                          <a href={rep.sheet_tab} target="_blank" rel="noopener noreferrer" className="text-[#3B7FE1] hover:underline text-xs">
+                            {rep.sheet_tab.includes("spreadsheets/d/") ? "View Sheet" : rep.sheet_tab}
+                          </a>
+                        ) : (
+                          <span className="text-[#9ca3af] italic text-xs">Not set</span>
+                        )}
+                      </td>
                       <td className="py-3 text-right space-x-2">
                         <button
                           onClick={() => openEditModal(rep)}
@@ -379,15 +387,15 @@ export default function AdminPayStructurePage() {
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[#6b7280] uppercase tracking-wider">Google Sheet Tab</label>
+                <label className="text-xs font-medium text-[#6b7280] uppercase tracking-wider">Google Sheets Link</label>
                 <input
-                  type="text"
+                  type="url"
                   value={editSheetTab}
                   onChange={(e) => setEditSheetTab(e.target.value)}
-                  placeholder="e.g. JR, Anthony, Dawson"
+                  placeholder="https://docs.google.com/spreadsheets/d/..."
                   className="w-full rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] placeholder-[#9ca3af] focus:border-[#3B7FE1] focus:outline-none"
                 />
-                <p className="text-xs text-[#9ca3af]">The exact tab name in the Google Sheet for this rep&apos;s deals</p>
+                <p className="text-xs text-[#9ca3af]">Paste the full Google Sheets URL for this rep&apos;s deals</p>
               </div>
               {actionError && (
                 <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{actionError}</p>
@@ -463,10 +471,10 @@ export default function AdminPayStructurePage() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-[#6b7280] uppercase tracking-wider">Google Sheet Tab</label>
-                <input type="text" value={newSheetTab} onChange={(e) => setNewSheetTab(e.target.value)} placeholder="e.g. JR, Anthony, Dawson"
+                <label className="text-xs font-medium text-[#6b7280] uppercase tracking-wider">Google Sheets Link</label>
+                <input type="url" value={newSheetTab} onChange={(e) => setNewSheetTab(e.target.value)} placeholder="https://docs.google.com/spreadsheets/d/..."
                   className="w-full rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] placeholder-[#9ca3af] focus:border-[#3B7FE1] focus:outline-none" />
-                <p className="text-xs text-[#9ca3af]">The exact tab name in the Google Sheet where this rep&apos;s deals are tracked</p>
+                <p className="text-xs text-[#9ca3af]">Paste the full Google Sheets URL for this rep&apos;s deals</p>
               </div>
 
               {actionError && (

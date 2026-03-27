@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllRepDeals, getMockDeals, getSheetDealsByTab } from "@/lib/sheets";
+import { getAllRepDeals, getMockDeals, getSheetDealsByUrl } from "@/lib/sheets";
 import type { SheetDeal } from "@/lib/sheets";
 import { supabaseAdmin, isSupabaseServerConfigured } from "@/lib/supabase-server";
 import type { Deal, ProductType, TermLength } from "@/lib/types";
@@ -50,7 +50,7 @@ async function fetchSheetDealsFromDB(): Promise<SheetDeal[]> {
 
     const results = await Promise.allSettled(
       repsWithTabs.map(async (rep: { email: string; name: string; sheet_tab: string }) => {
-        const deals = await getSheetDealsByTab(rep.sheet_tab);
+        const deals = await getSheetDealsByUrl(rep.sheet_tab);
         return deals.map(d => ({ ...d, repEmail: rep.email, repName: rep.name } as SheetDeal));
       })
     );

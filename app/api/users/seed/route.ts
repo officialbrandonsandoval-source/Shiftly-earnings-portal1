@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 
 // All users to seed into Supabase Auth + users table
+// Default sheet: https://docs.google.com/spreadsheets/d/1l7FcHInnagyvzEM_Op2RY53NSZBnL6wsYuyaVsj3beU
+// Each rep has their own tab in this sheet
+const BASE_SHEET = "https://docs.google.com/spreadsheets/d/1l7FcHInnagyvzEM_Op2RY53NSZBnL6wsYuyaVsj3beU/edit";
+
 const SEED_USERS = [
   { email: "ryan@shiftlyauto.com", name: "Ryan", role: "manager", pay_structure_id: "00000000-0000-0000-0000-000000000001", sheet_tab: "", password: "Shiftly123!" },
   { email: "jr@shiftlyauto.com", name: "JR", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000002", sheet_tab: "JR", password: "Shiftly123!" },
@@ -11,6 +15,8 @@ const SEED_USERS = [
   { email: "alex@shiftlyauto.com", name: "Alex", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", sheet_tab: "Alex", password: "Shiftly123!" },
   { email: "jeremy@shiftlyauto.com", name: "Jeremy", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", sheet_tab: "Jeremy", password: "Shiftly123!" },
 ];
+
+void BASE_SHEET; // Referenced for documentation
 
 export async function POST() {
   const results: { email: string; status: string; error?: string }[] = [];

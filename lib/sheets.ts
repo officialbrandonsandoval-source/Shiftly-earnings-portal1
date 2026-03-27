@@ -160,20 +160,60 @@ export function getMockDeals(): SheetDeal[] {
   ];
 }
 
-// Per-rep sheet fetcher — fetches a specific tab by name
-export async function getSheetDealsByTab(tabName: string): Promise<SheetDeal[]> {
-  if (!tabName) return [];
+// Parse a Google Sheets URL to extract sheet ID and optional gid/tab
+export function parseSheetUrl(input: string): { sheetId: string; gid?: string; tab?: string } | null {
+  if (!input) return null;
+
+  // Full URL: https://docs.google.com/spreadsheets/d/SHEET_ID/edit#gid=123
+  const urlMatch = input.match(/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if (urlMatch) {
+    const sheetId = urlMatch[1];
+    const gidMatch = input.match(/[#?&]gid=(\d+)/);
+    return { sheetId, gid: gidMatch?.[1] };
+  }
+
+  // If it's just a tab name (legacy support), use default sheet
+  if (!input.includes('/') && !input.includes('http')) {
+    return { sheetId: SHEET_ID, tab: input };
+  }
+
+  return null;
+}
+
+// Fetch deals from a specific Google Sheet URL or tab name
+export async function getSheetDealsByUrl(sheetInput: string): Promise<SheetDeal[]> {
+  if (!sheetInput) return [];
+
+  const parsed = parseSheetUrl(sheetInput);
+  if (!parsed) return [];
+
   try {
-    // URL-encode the tab name for the sheet parameter
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}`;
+    let url: string;
+    if (parsed.tab) {
+      // Legacy tab name — use default sheet ID with tab
+      url = `https://docs.google.com/spreadsheets/d/${parsed.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(parsed.tab)}`;
+    } else if (parsed.gid) {
+      // Full URL with gid
+      url = `https://docs.google.com/spreadsheets/d/${parsed.sheetId}/gviz/tq?tqx=out:csv&gid=${parsed.gid}`;
+    } else {
+      // Full URL, default to first tab
+      url = `https://docs.google.com/spreadsheets/d/${parsed.sheetId}/gviz/tq?tqx=out:csv&gid=0`;
+    }
+
     const res = await fetch(url, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const csv = await res.text();
     const rows = parseCSV(csv);
-    return parseDeals(rows, tabName);
+    return parseDeals(rows, parsed.tab || 'Sheet1');
   } catch {
     return [];
   }
+}
+
+// Per-rep sheet fetcher — fetches a specific tab by name (legacy)
+export async function getSheetDealsByTab(tabName: string): Promise<SheetDeal[]> {
+  if (!tabName) return [];
+  return getSheetDealsByUrl(tabName);
 }
 
 // Fetch all reps' deals (for manager view)
