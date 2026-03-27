@@ -1,10 +1,22 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-server";
+import { supabaseAdmin, isSupabaseServerConfigured } from "@/lib/supabase-server";
+
+// In-memory store for demo mode activity logs
+const demoActivityLogs: Record<string, unknown>[] = [];
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("email");
   const role = searchParams.get("role");
+
+  if (!isSupabaseServerConfigured()) {
+    // Demo mode: return in-memory logs filtered by email
+    let logs = demoActivityLogs;
+    if (role !== "manager" && email) {
+      logs = logs.filter((l) => (l as { rep_email: string }).rep_email === email);
+    }
+    return NextResponse.json(logs);
+  }
 
   let query = supabaseAdmin
     .from("activity_log")
@@ -35,18 +47,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const logEntry = {
+      rep_email,
+      rep_name,
+      log_date,
+      scheduled_calls: Number(scheduled_calls) || 0,
+      shown_calls: Number(shown_calls) || 0,
+      sold_deals: Number(sold_deals) || 0,
+      revenue_collected: Number(revenue_collected) || 0,
+      no_shows: Number(no_shows) || 0,
+    };
+
+    if (!isSupabaseServerConfigured()) {
+      // Demo mode: store in memory
+      const entry = { id: `demo-${Date.now()}`, ...logEntry, created_at: new Date().toISOString() };
+      demoActivityLogs.unshift(entry);
+      return NextResponse.json(entry);
+    }
+
     const { data, error } = await supabaseAdmin
       .from("activity_log")
-      .insert({
-        rep_email,
-        rep_name,
-        log_date,
-        scheduled_calls: Number(scheduled_calls) || 0,
-        shown_calls: Number(shown_calls) || 0,
-        sold_deals: Number(sold_deals) || 0,
-        revenue_collected: Number(revenue_collected) || 0,
-        no_shows: Number(no_shows) || 0,
-      })
+      .insert(logEntry)
       .select()
       .single();
 

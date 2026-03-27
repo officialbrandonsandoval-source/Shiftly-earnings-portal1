@@ -147,11 +147,16 @@ export function getMockDeals(): SheetDeal[] {
   const m = now.getMonth() + 1;
   const y = now.getFullYear();
   return [
-    { date: `${m}/3/${y}`, dealerName: 'ABC Motors', clientName: 'ABC Motors', product: 'Tool', monthlyPrice: 299, setupFee: 500, term: 6, half: 'front', repEmail: 'mike@shiftlyauto.com', repName: 'Mike' },
-    { date: `${m}/7/${y}`, dealerName: 'Sunrise Auto', clientName: 'Sunrise Auto', product: 'Bundle Tool', monthlyPrice: 499, setupFee: 750, term: 12, half: 'front', repEmail: 'mike@shiftlyauto.com', repName: 'Mike' },
+    { date: `${m}/3/${y}`, dealerName: 'ABC Motors', clientName: 'ABC Motors', product: 'Tool', monthlyPrice: 299, setupFee: 500, term: 6, half: 'front', repEmail: 'anthony@shiftlyauto.com', repName: 'Anthony' },
+    { date: `${m}/5/${y}`, dealerName: 'Sunrise Auto', clientName: 'Sunrise Auto', product: 'Bundle Tool', monthlyPrice: 499, setupFee: 750, term: 12, half: 'front', repEmail: 'jr@shiftlyauto.com', repName: 'JR' },
+    { date: `${m}/7/${y}`, dealerName: 'Pacific Honda', clientName: 'Pacific Honda', product: 'Ads', monthlyPrice: 349, setupFee: 500, term: 6, half: 'front', repEmail: 'dawson@shiftlyauto.com', repName: 'Dawson' },
     { date: `${m}/10/${y}`, dealerName: 'Desert Cars', clientName: 'Desert Cars', product: 'Ads', monthlyPrice: 399, setupFee: 600, term: 3, half: 'front', repEmail: 'jr@shiftlyauto.com', repName: 'JR' },
-    { date: `${m}/18/${y}`, dealerName: 'Valley Ford', clientName: 'Valley Ford', product: 'Bundle Ads', monthlyPrice: 599, setupFee: 900, term: 6, half: 'back', repEmail: 'mike@shiftlyauto.com', repName: 'Mike' },
+    { date: `${m}/12/${y}`, dealerName: 'Metro Chevy', clientName: 'Metro Chevy', product: 'Tool', monthlyPrice: 299, setupFee: 500, term: 3, half: 'front', repEmail: 'alex@shiftlyauto.com', repName: 'Alex' },
+    { date: `${m}/14/${y}`, dealerName: 'Lakeside BMW', clientName: 'Lakeside BMW', product: 'Bundle Tool', monthlyPrice: 549, setupFee: 800, term: 12, half: 'front', repEmail: 'gdykema@shiftlyauto.com', repName: 'G Dykema' },
+    { date: `${m}/18/${y}`, dealerName: 'Valley Ford', clientName: 'Valley Ford', product: 'Bundle Ads', monthlyPrice: 599, setupFee: 900, term: 6, half: 'back', repEmail: 'anthony@shiftlyauto.com', repName: 'Anthony' },
+    { date: `${m}/20/${y}`, dealerName: 'Summit Toyota', clientName: 'Summit Toyota', product: 'Tool', monthlyPrice: 299, setupFee: 500, term: 6, half: 'back', repEmail: 'jeremy@shiftlyauto.com', repName: 'Jeremy' },
     { date: `${m}/22/${y}`, dealerName: 'Mesa Auto', clientName: 'Mesa Auto', product: 'Tool', monthlyPrice: 299, setupFee: 500, term: 1, half: 'back', repEmail: 'jr@shiftlyauto.com', repName: 'JR' },
+    { date: `${m}/25/${y}`, dealerName: 'Coastal Kia', clientName: 'Coastal Kia', product: 'Ads', monthlyPrice: 399, setupFee: 600, term: 3, half: 'back', repEmail: 'dawson@shiftlyauto.com', repName: 'Dawson' },
   ];
 }
 

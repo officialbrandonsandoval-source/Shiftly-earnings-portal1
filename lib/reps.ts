@@ -11,15 +11,15 @@ export interface RepConfig {
 // Tab names assumed to match first name or display name in the sheet
 // UPDATE sheetTab values if Ryan uses different tab names
 export const REPS: RepConfig[] = [
-  { email: 'anthony@shiftlyauto.com',  name: 'Anthony',  sheetTab: 'Anthony',  payStructure: 'standard',  role: 'rep' },
-  { email: 'JR@shiftlyauto.com',       name: 'JR',       sheetTab: 'JR',       payStructure: 'jr-custom', role: 'rep' },
-  { email: 'Dawson@shiftlyauto.com',   name: 'Dawson',   sheetTab: 'Dawson',   payStructure: 'standard',  role: 'rep' },
-  { email: 'gdykema@shiftlyauto.com',  name: 'Gabriel',   sheetTab: 'Gabriel', payStructure: 'standard',  role: 'rep' },
-  { email: 'alex@shiftlyauto.com',     name: 'Alex',     sheetTab: 'Alex',     payStructure: 'standard',  role: 'rep' },
-  { email: 'Jeremy@shiftlyauto.com',   name: 'Jeremy',   sheetTab: 'Jeremy',   payStructure: 'standard',  role: 'rep' },
+  { email: 'anthony@shiftlyauto.com',  name: 'Anthony',   sheetTab: 'Anthony',  payStructure: 'standard',  role: 'rep' },
+  { email: 'jr@shiftlyauto.com',       name: 'JR',        sheetTab: 'JR',       payStructure: 'jr-custom', role: 'rep' },
+  { email: 'dawson@shiftlyauto.com',   name: 'Dawson',    sheetTab: 'Dawson',   payStructure: 'standard',  role: 'rep' },
+  { email: 'gdykema@shiftlyauto.com',  name: 'G Dykema',  sheetTab: 'Gabriel',  payStructure: 'standard',  role: 'rep' },
+  { email: 'alex@shiftlyauto.com',     name: 'Alex',      sheetTab: 'Alex',     payStructure: 'standard',  role: 'rep' },
+  { email: 'jeremy@shiftlyauto.com',   name: 'Jeremy',    sheetTab: 'Jeremy',   payStructure: 'standard',  role: 'rep' },
   // Managers — can see all reps
-  { email: 'ryan@shiftlyauto.com',     name: 'Ryan',     sheetTab: '',         payStructure: 'standard',  role: 'manager' },
-  { email: 'brandon@shiftlyauto.com',  name: 'Brandon',  sheetTab: '',         payStructure: 'standard',  role: 'manager' },
+  { email: 'ryan@shiftlyauto.com',     name: 'Ryan',      sheetTab: '',         payStructure: 'standard',  role: 'manager' },
+  { email: 'brandon@shiftlyauto.com',  name: 'Brandon',   sheetTab: '',         payStructure: 'standard',  role: 'manager' },
 ];
 
 export function getRepByEmail(email: string): RepConfig | undefined {

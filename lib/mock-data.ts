@@ -38,6 +38,6 @@ export const MOCK_PAY_STRUCTURES: PayStructure[] = [
 ];
 
 export function getPayStructureForEmail(email: string): PayStructure {
-  if (email === "jr@shiftlyauto.com") return MOCK_PAY_STRUCTURES[1];
+  if (email.toLowerCase() === "jr@shiftlyauto.com") return MOCK_PAY_STRUCTURES[1];
   return MOCK_PAY_STRUCTURES[0];
 }
