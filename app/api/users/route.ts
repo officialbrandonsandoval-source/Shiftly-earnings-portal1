@@ -19,7 +19,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, password, name, role, pay_structure_id } = body;
+    const { email, password, name, role, pay_structure_id, sheet_tab } = body;
 
     if (!email || !password || !name) {
       return NextResponse.json({ error: "Missing required fields (email, password, name)" }, { status: 400 });
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
               name,
               role: role || "rep",
               pay_structure_id: pay_structure_id || null,
+              sheet_tab: sheet_tab || null,
             }, { onConflict: "id" })
             .select()
             .single();
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
         name,
         role: role || "rep",
         pay_structure_id: pay_structure_id || null,
+        sheet_tab: sheet_tab || null,
       })
       .select()
       .single();
@@ -83,6 +85,40 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("Create user error:", err);
     return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
+  }
+}
+
+// PATCH /api/users - update an existing user's profile fields
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { email, pay_structure_id, sheet_tab, role, name } = body;
+
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (pay_structure_id !== undefined) updates.pay_structure_id = pay_structure_id || null;
+    if (sheet_tab !== undefined) updates.sheet_tab = sheet_tab || null;
+    if (role !== undefined) updates.role = role;
+    if (name !== undefined) updates.name = name;
+
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .update(updates)
+      .eq("email", email.toLowerCase())
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data);
+  } catch (err) {
+    console.error("Update user error:", err);
+    return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
   }
 }
 

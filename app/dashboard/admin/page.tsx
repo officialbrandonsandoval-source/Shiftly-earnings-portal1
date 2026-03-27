@@ -25,12 +25,15 @@ export default function AdminPayStructurePage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  const [editSheetTab, setEditSheetTab] = useState("");
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("Shiftly123!");
   const [newRole, setNewRole] = useState<"manager" | "rep">("rep");
   const [newPayStructureId, setNewPayStructureId] = useState(MOCK_PAY_STRUCTURES[0]?.id || "");
+  const [newSheetTab, setNewSheetTab] = useState("");
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "manager")) {
@@ -100,11 +103,35 @@ export default function AdminPayStructurePage() {
   function openEditModal(rep: AppUser) {
     setEditingRep(rep);
     setEditPayStructureId(rep.pay_structure_id || MOCK_PAY_STRUCTURES[0]?.id || "");
+    setEditSheetTab(rep.sheet_tab || "");
   }
 
-  function saveEditPayStructure() {
-    // Pay structure editing would require an update endpoint - for now just close
-    setEditingRep(null);
+  async function saveEditRep() {
+    if (!editingRep) return;
+    setActionError(null);
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: editingRep.email,
+          pay_structure_id: editPayStructureId || null,
+          sheet_tab: editSheetTab || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setActionError(data.error || "Failed to update user");
+        return;
+      }
+      await fetchUsers();
+      setEditingRep(null);
+    } catch {
+      setActionError("Failed to update user");
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   async function handleAddRep(e: React.FormEvent) {
@@ -121,6 +148,7 @@ export default function AdminPayStructurePage() {
           name: newName.trim(),
           role: newRole,
           pay_structure_id: newPayStructureId || null,
+          sheet_tab: newSheetTab.trim() || null,
         }),
       });
       const data = await res.json();
@@ -135,6 +163,7 @@ export default function AdminPayStructurePage() {
       setNewPassword("Shiftly123!");
       setNewRole("rep");
       setNewPayStructureId(MOCK_PAY_STRUCTURES[0]?.id || "");
+      setNewSheetTab("");
       setShowAddModal(false);
     } catch {
       setActionError("Failed to create user");
@@ -272,6 +301,7 @@ export default function AdminPayStructurePage() {
                     <th className="pb-3 font-medium">Email</th>
                     <th className="pb-3 font-medium">Role</th>
                     <th className="pb-3 font-medium">Pay Structure</th>
+                    <th className="pb-3 font-medium">Sheet Tab</th>
                     <th className="pb-3 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
@@ -297,6 +327,7 @@ export default function AdminPayStructurePage() {
                         </span>
                       </td>
                       <td className="py-3 text-[#6b7280]">{getStructureName(rep.pay_structure_id)}</td>
+                      <td className="py-3 text-[#6b7280]">{rep.sheet_tab || <span className="text-[#9ca3af] italic">Not set</span>}</td>
                       <td className="py-3 text-right space-x-2">
                         <button
                           onClick={() => openEditModal(rep)}
@@ -327,7 +358,7 @@ export default function AdminPayStructurePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl bg-white border border-[#e5e7eb] shadow-2xl">
             <div className="flex items-center justify-between p-6 border-b border-[#e5e7eb]">
-              <h3 className="text-lg font-semibold text-[#111827]">Edit Pay Structure</h3>
+              <h3 className="text-lg font-semibold text-[#111827]">Edit Rep</h3>
               <button onClick={() => setEditingRep(null)} className="text-[#6b7280] hover:text-[#111827] transition text-xl leading-none">&times;</button>
             </div>
             <div className="p-6 space-y-4">
@@ -347,9 +378,25 @@ export default function AdminPayStructurePage() {
                   ))}
                 </select>
               </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[#6b7280] uppercase tracking-wider">Google Sheet Tab</label>
+                <input
+                  type="text"
+                  value={editSheetTab}
+                  onChange={(e) => setEditSheetTab(e.target.value)}
+                  placeholder="e.g. JR, Anthony, Dawson"
+                  className="w-full rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] placeholder-[#9ca3af] focus:border-[#3B7FE1] focus:outline-none"
+                />
+                <p className="text-xs text-[#9ca3af]">The exact tab name in the Google Sheet for this rep&apos;s deals</p>
+              </div>
+              {actionError && (
+                <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{actionError}</p>
+              )}
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setEditingRep(null)} className="flex-1 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm font-medium text-[#6b7280] hover:text-[#111827] transition">Cancel</button>
-                <button onClick={saveEditPayStructure} className="flex-1 rounded-xl bg-[#3B7FE1] hover:bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white transition">Save</button>
+                <button onClick={() => setEditingRep(null)} disabled={actionLoading} className="flex-1 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm font-medium text-[#6b7280] hover:text-[#111827] transition disabled:opacity-50">Cancel</button>
+                <button onClick={saveEditRep} disabled={actionLoading} className="flex-1 rounded-xl bg-[#3B7FE1] hover:bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white transition disabled:opacity-50">
+                  {actionLoading ? "Saving..." : "Save"}
+                </button>
               </div>
             </div>
           </div>
@@ -414,6 +461,12 @@ export default function AdminPayStructurePage() {
                     ))}
                   </select>
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[#6b7280] uppercase tracking-wider">Google Sheet Tab</label>
+                <input type="text" value={newSheetTab} onChange={(e) => setNewSheetTab(e.target.value)} placeholder="e.g. JR, Anthony, Dawson"
+                  className="w-full rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] placeholder-[#9ca3af] focus:border-[#3B7FE1] focus:outline-none" />
+                <p className="text-xs text-[#9ca3af]">The exact tab name in the Google Sheet where this rep&apos;s deals are tracked</p>
               </div>
 
               {actionError && (

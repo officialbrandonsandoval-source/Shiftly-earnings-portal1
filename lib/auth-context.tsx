@@ -37,6 +37,7 @@ const DEFAULT_DEMO_USERS: Record<string, DemoUser> = {
     role: "manager",
     pay_structure_id: "00000000-0000-0000-0000-000000000001",
     password: "Shiftly123!",
+    sheet_tab: null,
   },
   "jr@shiftlyauto.com": {
     id: "demo-jr",
@@ -45,6 +46,7 @@ const DEFAULT_DEMO_USERS: Record<string, DemoUser> = {
     role: "rep",
     pay_structure_id: "00000000-0000-0000-0000-000000000002",
     password: "Shiftly123!",
+    sheet_tab: null,
   },
   "anthony@shiftlyauto.com": {
     id: "demo-anthony",
@@ -53,6 +55,7 @@ const DEFAULT_DEMO_USERS: Record<string, DemoUser> = {
     role: "rep",
     pay_structure_id: "00000000-0000-0000-0000-000000000001",
     password: "Shiftly123!",
+    sheet_tab: null,
   },
   "dawson@shiftlyauto.com": {
     id: "demo-dawson",
@@ -61,6 +64,7 @@ const DEFAULT_DEMO_USERS: Record<string, DemoUser> = {
     role: "rep",
     pay_structure_id: "00000000-0000-0000-0000-000000000001",
     password: "Shiftly123!",
+    sheet_tab: null,
   },
   "gdykema@shiftlyauto.com": {
     id: "demo-gdykema",
@@ -69,6 +73,7 @@ const DEFAULT_DEMO_USERS: Record<string, DemoUser> = {
     role: "rep",
     pay_structure_id: "00000000-0000-0000-0000-000000000001",
     password: "Shiftly123!",
+    sheet_tab: null,
   },
   "alex@shiftlyauto.com": {
     id: "demo-alex",
@@ -77,6 +82,7 @@ const DEFAULT_DEMO_USERS: Record<string, DemoUser> = {
     role: "rep",
     pay_structure_id: "00000000-0000-0000-0000-000000000001",
     password: "Shiftly123!",
+    sheet_tab: null,
   },
   "jeremy@shiftlyauto.com": {
     id: "demo-jeremy",
@@ -85,6 +91,7 @@ const DEFAULT_DEMO_USERS: Record<string, DemoUser> = {
     role: "rep",
     pay_structure_id: "00000000-0000-0000-0000-000000000001",
     password: "Shiftly123!",
+    sheet_tab: null,
   },
 };
 

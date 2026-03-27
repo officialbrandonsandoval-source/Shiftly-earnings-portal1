@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllRepDeals, getMockDeals } from "@/lib/sheets";
+import { getAllRepDeals, getMockDeals, getSheetDealsByTab } from "@/lib/sheets";
 import type { SheetDeal } from "@/lib/sheets";
 import { supabaseAdmin, isSupabaseServerConfigured } from "@/lib/supabase-server";
 import type { Deal, ProductType, TermLength } from "@/lib/types";
@@ -28,6 +28,39 @@ function sheetDealToDeal(d: SheetDeal): Deal {
     rep_name: d.repName || "",
     rep_email: d.repEmail || "",
   };
+}
+
+// Fetch deals from Google Sheets using user-configured sheet tabs from DB
+async function fetchSheetDealsFromDB(): Promise<SheetDeal[]> {
+  try {
+    const { data: users } = await supabaseAdmin
+      .from("users")
+      .select("email, name, sheet_tab, role")
+      .eq("role", "rep");
+
+    if (!users || users.length === 0) {
+      // Fall back to hardcoded reps.ts
+      return getAllRepDeals().catch(() => []);
+    }
+
+    const repsWithTabs = users.filter((u: { sheet_tab: string | null }) => u.sheet_tab);
+    if (repsWithTabs.length === 0) {
+      return getAllRepDeals().catch(() => []);
+    }
+
+    const results = await Promise.allSettled(
+      repsWithTabs.map(async (rep: { email: string; name: string; sheet_tab: string }) => {
+        const deals = await getSheetDealsByTab(rep.sheet_tab);
+        return deals.map(d => ({ ...d, repEmail: rep.email, repName: rep.name } as SheetDeal));
+      })
+    );
+
+    return results
+      .filter((r): r is PromiseFulfilledResult<SheetDeal[]> => r.status === 'fulfilled')
+      .flatMap(r => r.value);
+  } catch {
+    return getAllRepDeals().catch(() => []);
+  }
 }
 
 export async function GET() {
@@ -61,9 +94,9 @@ export async function GET() {
     return NextResponse.json(merged);
   }
 
-  // Fetch from both sources in parallel
+  // Fetch from Google Sheets (using DB-configured tabs) + Supabase deals in parallel
   const [sheetDeals, supabaseResult] = await Promise.all([
-    getAllRepDeals().catch(() => []),
+    fetchSheetDealsFromDB(),
     supabaseAdmin.from("deals").select("*").order("deal_date", { ascending: false }),
   ]);
 

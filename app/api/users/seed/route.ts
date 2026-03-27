@@ -3,13 +3,13 @@ import { supabaseAdmin } from "@/lib/supabase-server";
 
 // All users to seed into Supabase Auth + users table
 const SEED_USERS = [
-  { email: "ryan@shiftlyauto.com", name: "Ryan", role: "manager", pay_structure_id: "00000000-0000-0000-0000-000000000001", password: "Shiftly123!" },
-  { email: "jr@shiftlyauto.com", name: "JR", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000002", password: "Shiftly123!" },
-  { email: "anthony@shiftlyauto.com", name: "Anthony", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", password: "Shiftly123!" },
-  { email: "dawson@shiftlyauto.com", name: "Dawson", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", password: "Shiftly123!" },
-  { email: "gdykema@shiftlyauto.com", name: "G Dykema", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", password: "Shiftly123!" },
-  { email: "alex@shiftlyauto.com", name: "Alex", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", password: "Shiftly123!" },
-  { email: "jeremy@shiftlyauto.com", name: "Jeremy", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", password: "Shiftly123!" },
+  { email: "ryan@shiftlyauto.com", name: "Ryan", role: "manager", pay_structure_id: "00000000-0000-0000-0000-000000000001", sheet_tab: "", password: "Shiftly123!" },
+  { email: "jr@shiftlyauto.com", name: "JR", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000002", sheet_tab: "JR", password: "Shiftly123!" },
+  { email: "anthony@shiftlyauto.com", name: "Anthony", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", sheet_tab: "Anthony", password: "Shiftly123!" },
+  { email: "dawson@shiftlyauto.com", name: "Dawson", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", sheet_tab: "Dawson", password: "Shiftly123!" },
+  { email: "gdykema@shiftlyauto.com", name: "G Dykema", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", sheet_tab: "Gabriel", password: "Shiftly123!" },
+  { email: "alex@shiftlyauto.com", name: "Alex", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", sheet_tab: "Alex", password: "Shiftly123!" },
+  { email: "jeremy@shiftlyauto.com", name: "Jeremy", role: "rep", pay_structure_id: "00000000-0000-0000-0000-000000000001", sheet_tab: "Jeremy", password: "Shiftly123!" },
 ];
 
 export async function POST() {
@@ -61,6 +61,7 @@ export async function POST() {
           name: user.name,
           role: user.role,
           pay_structure_id: user.pay_structure_id,
+          sheet_tab: user.sheet_tab || null,
         }, { onConflict: "id" });
 
       if (dbError) {

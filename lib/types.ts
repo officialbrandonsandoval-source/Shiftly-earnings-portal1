@@ -10,6 +10,7 @@ export interface AppUser {
   name: string;
   role: UserRole;
   pay_structure_id: string | null;
+  sheet_tab: string | null;
 }
 
 export interface PayStructure {
