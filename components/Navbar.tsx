@@ -1,65 +1,50 @@
 "use client";
 
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
 
 interface NavbarProps {
   userName: string;
   userRole: string;
   onLogout: () => void;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export default function Navbar({ userName, userRole, onLogout }: NavbarProps) {
-  const pathname = usePathname();
+const TABS = ["Earnings", "Deals", "Activity Log"];
 
-  const tabs = [
-    { label: "Earnings", href: "/" },
-    { label: "Deals", href: "/#deals" },
-    { label: "Activity Log", href: "/#activity" },
-    { label: "Settings", href: "/settings" },
-  ];
-
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href.split("#")[0]);
-  };
-
+export default function Navbar({ userName, userRole, onLogout, activeTab = "Earnings", onTabChange }: NavbarProps) {
   return (
-    <nav className="sticky top-0 z-40 border-b border-[#E5E7EB] bg-black">
+    <nav className="sticky top-0 z-40 bg-black">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         {/* Logo + Brand */}
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-2">
-            {/* Check for SVG logo, fall back to text */}
-            <div className="flex items-center">
-              <Image
-                src="/Shiftly-Auto.png"
-                alt="Shiftly Auto"
-                width={40}
-                height={40}
-                className="object-contain"
-              />
-            </div>
+        <div className="flex items-center gap-10">
+          <div className="flex items-center">
+            <Image
+              src="/Shiftly-Auto.png"
+              alt="Shiftly Auto"
+              width={160}
+              height={56}
+              className="object-contain"
+            />
           </div>
 
           {/* Navigation Tabs */}
           <div className="hidden sm:flex items-center gap-6">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.href}
-                href={tab.href}
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => onTabChange?.(tab)}
                 className={`text-sm font-medium transition-colors relative pb-1 ${
-                  isActive(tab.href)
+                  activeTab === tab
                     ? "text-white"
                     : "text-[#9CA3AF] hover:text-white"
                 }`}
               >
-                {tab.label}
-                {isActive(tab.href) && (
+                {tab}
+                {activeTab === tab && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0066FF]" />
                 )}
-              </Link>
+              </button>
             ))}
           </div>
         </div>
@@ -67,7 +52,7 @@ export default function Navbar({ userName, userRole, onLogout }: NavbarProps) {
         {/* User Info + Logout */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-[#ffffff]/70">{userName}</span>
+            <span className="text-sm text-white/70">{userName}</span>
             <span className="rounded-full bg-[#0066FF]/20 px-2.5 py-0.5 text-xs font-medium text-[#0066FF] border border-[#0066FF]/30">
               {userRole}
             </span>
