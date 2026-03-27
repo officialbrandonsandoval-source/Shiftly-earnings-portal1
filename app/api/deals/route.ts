@@ -8,7 +8,6 @@ import type { Deal, ProductType, TermLength } from "@/lib/types";
 const demoDeals: Deal[] = [];
 
 function sheetDealToDeal(d: SheetDeal): Deal {
-  // Normalize date from "M/D/YYYY" or "YYYY-MM-DD" to "YYYY-MM-DD"
   let date = d.date;
   if (date.includes("/")) {
     const parts = date.split("/");
@@ -30,23 +29,19 @@ function sheetDealToDeal(d: SheetDeal): Deal {
   };
 }
 
-// Fetch deals from Google Sheets using user-configured sheet tabs from DB
 async function fetchSheetDealsFromDB(): Promise<SheetDeal[]> {
   try {
-    const { data: users } = await supabaseAdmin
+    const { data: users, error } = await supabaseAdmin
       .from("users")
       .select("email, name, sheet_tab, role")
       .eq("role", "rep");
 
-    if (!users || users.length === 0) {
-      // Fall back to hardcoded reps.ts
-      return getAllRepDeals().catch(() => []);
+    if (error || !users || users.length === 0) {
+      return [];
     }
 
     const repsWithTabs = users.filter((u: { sheet_tab: string | null }) => u.sheet_tab);
-    if (repsWithTabs.length === 0) {
-      return getAllRepDeals().catch(() => []);
-    }
+    if (repsWithTabs.length === 0) return [];
 
     const results = await Promise.allSettled(
       repsWithTabs.map(async (rep: { email: string; name: string; sheet_tab: string }) => {
@@ -59,31 +54,69 @@ async function fetchSheetDealsFromDB(): Promise<SheetDeal[]> {
       .filter((r): r is PromiseFulfilledResult<SheetDeal[]> => r.status === 'fulfilled')
       .flatMap(r => r.value);
   } catch {
-    return getAllRepDeals().catch(() => []);
+    return [];
   }
 }
 
 export async function GET() {
-  if (!isSupabaseServerConfigured()) {
-    // Demo mode: use mock deals + any submitted demo deals
-    const sheetDeals = await getAllRepDeals().catch(() => []);
-    let mockConverted: Deal[] = [];
+  try {
+    if (!isSupabaseServerConfigured()) {
+      // Demo mode
+      const sheetDeals = await getAllRepDeals().catch(() => []);
+      const mockConverted = sheetDeals.length > 0
+        ? sheetDeals.map(sheetDealToDeal)
+        : getMockDeals().map(sheetDealToDeal);
 
-    if (sheetDeals.length > 0) {
-      mockConverted = sheetDeals.map(sheetDealToDeal);
-    } else {
-      mockConverted = getMockDeals().map(sheetDealToDeal);
+      const seen = new Set<string>();
+      const merged: Deal[] = [];
+      for (const deal of demoDeals) {
+        const key = `${deal.date}|${deal.dealer.toLowerCase()}|${deal.monthly_price}`;
+        seen.add(key);
+        merged.push(deal);
+      }
+      for (const deal of mockConverted) {
+        const key = `${deal.date}|${deal.dealer.toLowerCase()}|${deal.monthly_price}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          merged.push(deal);
+        }
+      }
+      return NextResponse.json(merged);
     }
 
-    // Merge mock + submitted demo deals, dedup
+    // Production: fetch from Supabase deals table + Google Sheets in parallel
+    // Each source is independently try/caught so one failing doesn't break the other
+    const [sheetDeals, supabaseResult] = await Promise.all([
+      fetchSheetDealsFromDB().catch(() => [] as SheetDeal[]),
+      supabaseAdmin.from("deals").select("*").order("deal_date", { ascending: false }).then(
+        (res) => res,
+        () => ({ data: null, error: { message: "fetch failed" } })
+      ),
+    ]);
+
+    const sbDeals: Deal[] = (supabaseResult.data ?? []).map((d) => ({
+      date: d.deal_date,
+      client: d.client_name,
+      dealer: d.dealer_name,
+      product: d.product as ProductType,
+      monthly_price: Number(d.monthly_price),
+      setup_fee: Number(d.setup_fee),
+      term: Number(d.term) as TermLength,
+      rep_name: d.rep_name,
+      rep_email: d.rep_email,
+    }));
+
+    const convertedSheetDeals: Deal[] = sheetDeals.map(sheetDealToDeal);
+
     const seen = new Set<string>();
     const merged: Deal[] = [];
-    for (const deal of demoDeals) {
+
+    for (const deal of sbDeals) {
       const key = `${deal.date}|${deal.dealer.toLowerCase()}|${deal.monthly_price}`;
       seen.add(key);
       merged.push(deal);
     }
-    for (const deal of mockConverted) {
+    for (const deal of convertedSheetDeals) {
       const key = `${deal.date}|${deal.dealer.toLowerCase()}|${deal.monthly_price}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -92,50 +125,10 @@ export async function GET() {
     }
 
     return NextResponse.json(merged);
+  } catch (err) {
+    console.error("Deals API error:", err);
+    return NextResponse.json([]);
   }
-
-  // Fetch from Google Sheets (using DB-configured tabs) + Supabase deals in parallel
-  const [sheetDeals, supabaseResult] = await Promise.all([
-    fetchSheetDealsFromDB(),
-    supabaseAdmin.from("deals").select("*").order("deal_date", { ascending: false }),
-  ]);
-
-  // Convert Supabase deals to Deal shape
-  const sbDeals: Deal[] = (supabaseResult.data ?? []).map((d) => ({
-    date: d.deal_date,
-    client: d.client_name,
-    dealer: d.dealer_name,
-    product: d.product as ProductType,
-    monthly_price: Number(d.monthly_price),
-    setup_fee: Number(d.setup_fee),
-    term: Number(d.term) as TermLength,
-    rep_name: d.rep_name,
-    rep_email: d.rep_email,
-  }));
-
-  // Convert sheet deals to Deal shape
-  const convertedSheetDeals: Deal[] = sheetDeals.map(sheetDealToDeal);
-
-  // Deduplicate: if same date + dealer + monthly_price, prefer Supabase version
-  const seen = new Set<string>();
-  const merged: Deal[] = [];
-
-  for (const deal of sbDeals) {
-    const key = `${deal.date}|${deal.dealer.toLowerCase()}|${deal.monthly_price}`;
-    seen.add(key);
-    merged.push(deal);
-  }
-
-  for (const deal of convertedSheetDeals) {
-    const key = `${deal.date}|${deal.dealer.toLowerCase()}|${deal.monthly_price}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      merged.push(deal);
-    }
-  }
-
-  return NextResponse.json(merged);
 }
 
-// Export for use by submit route in demo mode
 export { demoDeals };

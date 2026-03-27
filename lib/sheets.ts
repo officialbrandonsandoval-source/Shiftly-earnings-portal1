@@ -20,9 +20,21 @@ export interface SheetDeal {
   sheetTab?: string;
 }
 
+// Fetch with a 5-second timeout to prevent hanging
+async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 async function fetchSheetCSV(gid = '0'): Promise<string> {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
-  const res = await fetch(url, { next: { revalidate: 60 } });
+  const res = await fetchWithTimeout(url);
   if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status}`);
   return res.text();
 }
@@ -200,7 +212,7 @@ export async function getSheetDealsByUrl(sheetInput: string): Promise<SheetDeal[
       url = `https://docs.google.com/spreadsheets/d/${parsed.sheetId}/gviz/tq?tqx=out:csv&gid=0`;
     }
 
-    const res = await fetch(url, { next: { revalidate: 60 } });
+    const res = await fetchWithTimeout(url);
     if (!res.ok) return [];
     const csv = await res.text();
     const rows = parseCSV(csv);

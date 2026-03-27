@@ -5,37 +5,41 @@ import { supabaseAdmin, isSupabaseServerConfigured } from "@/lib/supabase-server
 const demoActivityLogs: Record<string, unknown>[] = [];
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const email = searchParams.get("email");
-  const role = searchParams.get("role");
+  try {
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get("email");
+    const role = searchParams.get("role");
 
-  if (!isSupabaseServerConfigured()) {
-    // Demo mode: return in-memory logs filtered by email
-    let logs = demoActivityLogs;
-    if (role !== "manager" && email) {
-      logs = logs.filter((l) => (l as { rep_email: string }).rep_email === email);
+    if (!isSupabaseServerConfigured()) {
+      let logs = demoActivityLogs;
+      if (role !== "manager" && email) {
+        logs = logs.filter((l) => (l as { rep_email: string }).rep_email === email);
+      }
+      return NextResponse.json(logs);
     }
-    return NextResponse.json(logs);
+
+    let query = supabaseAdmin
+      .from("activity_log")
+      .select("*")
+      .order("log_date", { ascending: false })
+      .limit(50);
+
+    if (role !== "manager" && email) {
+      query = query.eq("rep_email", email);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Activity GET error:", error.message);
+      return NextResponse.json([]);
+    }
+
+    return NextResponse.json(data ?? []);
+  } catch (err) {
+    console.error("Activity GET error:", err);
+    return NextResponse.json([]);
   }
-
-  let query = supabaseAdmin
-    .from("activity_log")
-    .select("*")
-    .order("log_date", { ascending: false })
-    .limit(50);
-
-  // If rep, filter to their logs only
-  if (role !== "manager" && email) {
-    query = query.eq("rep_email", email);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json(data ?? []);
 }
 
 export async function POST(request: Request) {
@@ -59,7 +63,6 @@ export async function POST(request: Request) {
     };
 
     if (!isSupabaseServerConfigured()) {
-      // Demo mode: store in memory
       const entry = { id: `demo-${Date.now()}`, ...logEntry, created_at: new Date().toISOString() };
       demoActivityLogs.unshift(entry);
       return NextResponse.json(entry);
@@ -72,12 +75,13 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
+      console.error("Activity POST error:", error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error("Activity log error:", err);
+    console.error("Activity POST error:", err);
     return NextResponse.json({ error: "Failed to log activity" }, { status: 500 });
   }
 }

@@ -73,31 +73,38 @@ export default function ManagerDashboard() {
   }, [user, loading, router]);
 
   useEffect(() => {
+    if (!user || user.role !== "manager") {
+      setFetchLoading(false);
+      return;
+    }
     async function fetchDeals() {
       try {
         const res = await fetch("/api/deals");
-        if (res.ok) {
-          const data = await res.json();
-          setDeals(data.deals ?? data);
-        }
+        const data = await res.json();
+        const arr = Array.isArray(data) ? data : (Array.isArray(data?.deals) ? data.deals : []);
+        setDeals(arr);
       } catch {
-        // silently fail
+        setDeals([]);
       } finally {
         setFetchLoading(false);
       }
     }
-    if (user?.role === "manager") {
-      fetchDeals();
-    }
+    fetchDeals();
   }, [user]);
 
   // Fetch activity logs for manager (all reps)
   useEffect(() => {
     if (!user || user.role !== "manager") return;
-    fetch(`/api/activity?role=manager`)
-      .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data)) setActivityLogs(data); })
-      .catch(() => {});
+    async function fetchActivity() {
+      try {
+        const res = await fetch("/api/activity?role=manager");
+        const data = await res.json();
+        if (Array.isArray(data)) setActivityLogs(data);
+      } catch {
+        setActivityLogs([]);
+      }
+    }
+    fetchActivity();
   }, [user]);
 
   const availableMonths = useMemo(
