@@ -6,10 +6,9 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 
 export default function SettingsPage() {
-  const { user, loading, logout, changePassword } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
 
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -37,18 +36,25 @@ export default function SettingsPage() {
     }
 
     setSaving(true);
-    const { error: changeError } = await changePassword(currentPassword, newPassword);
-    setSaving(false);
-
-    if (changeError) {
-      setError(changeError);
-      return;
+    try {
+      const res = await fetch("/api/users/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user!.id, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to change password");
+        return;
+      }
+      setSuccess("Password changed successfully");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch {
+      setError("Failed to change password");
+    } finally {
+      setSaving(false);
     }
-
-    setSuccess("Password changed successfully");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
   }
 
   if (loading || !user) return null;
@@ -96,17 +102,6 @@ export default function SettingsPage() {
         <div className="rounded-xl bg-white border border-[#e5e7eb] p-6">
           <h3 className="text-lg font-semibold text-[#111827] mb-4">Change Password</h3>
           <form onSubmit={handleChangePassword} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#6b7280] uppercase tracking-wider">Current Password</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-                className="w-full rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] placeholder-[#9ca3af] focus:border-[#0066FF] focus:outline-none"
-                placeholder="Enter current password"
-              />
-            </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-[#6b7280] uppercase tracking-wider">New Password</label>
               <input

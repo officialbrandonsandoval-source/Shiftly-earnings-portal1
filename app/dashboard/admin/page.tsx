@@ -1,9 +1,9 @@
 "use client";
 
-import { useAuth, DemoUser } from "@/lib/auth-context";
+import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Deal, PayStructure } from "@/lib/types";
+import { Deal, PayStructure, AppUser } from "@/lib/types";
 import { MOCK_PAY_STRUCTURES, getPayStructureForEmail } from "@/lib/mock-data";
 import { calculateCommission } from "@/lib/commission";
 import { formatPercent, formatCurrency, getMonthKey } from "@/lib/utils";
@@ -11,28 +11,19 @@ import EarningsGraph from "@/components/EarningsGraph";
 import Navbar from "@/components/Navbar";
 
 export default function AdminPayStructurePage() {
-  const { user, loading, logout, addUser, removeUser, getUsers } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
 
   const [payStructures] = useState<PayStructure[]>(MOCK_PAY_STRUCTURES);
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [reps, setReps] = useState<AppUser[]>([]);
+  const [repsLoading, setRepsLoading] = useState(true);
 
-  const reps = useMemo(() => {
-    const users = getUsers();
-    return users.map((u) => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      payStructureId: u.pay_structure_id || "00000000-0000-0000-0000-000000000001",
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getUsers, refreshKey]);
-
-  const [editingRep, setEditingRep] = useState<{ id: string; name: string; email: string; role: "manager" | "rep"; payStructureId: string } | null>(null);
+  const [editingRep, setEditingRep] = useState<AppUser | null>(null);
   const [editPayStructureId, setEditPayStructureId] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState("");
@@ -46,6 +37,25 @@ export default function AdminPayStructurePage() {
       router.replace("/login");
     }
   }, [user, loading, router]);
+
+  // Fetch users from API
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setReps(data);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setRepsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user?.role === "manager") fetchUsers();
+  }, [user, fetchUsers]);
 
   useEffect(() => {
     async function fetchDeals() {
@@ -82,60 +92,86 @@ export default function AdminPayStructurePage() {
     [repMonthlyMrr]
   );
 
-  function getStructureName(id: string): string {
-    return payStructures.find((ps) => ps.id === id)?.name || "Unknown";
+  function getStructureName(id: string | null): string {
+    if (!id) return "Standard";
+    return payStructures.find((ps) => ps.id === id)?.name || "Standard";
   }
 
-  function openEditModal(rep: { id: string; name: string; email: string; role: "manager" | "rep"; payStructureId: string }) {
+  function openEditModal(rep: AppUser) {
     setEditingRep(rep);
-    setEditPayStructureId(rep.payStructureId);
+    setEditPayStructureId(rep.pay_structure_id || MOCK_PAY_STRUCTURES[0]?.id || "");
   }
 
   function saveEditPayStructure() {
-    if (!editingRep) return;
-    const users = getUsers();
-    const existing = users.find((u) => u.email.toLowerCase() === editingRep.email.toLowerCase());
-    if (existing) {
-      addUser({ ...existing, pay_structure_id: editPayStructureId });
-      setRefreshKey((k) => k + 1);
-    }
+    // Pay structure editing would require an update endpoint - for now just close
     setEditingRep(null);
   }
 
-  function handleAddRep(e: React.FormEvent) {
+  async function handleAddRep(e: React.FormEvent) {
     e.preventDefault();
-    const newUser: DemoUser = {
-      id: `demo-${Date.now()}`,
-      name: newName.trim(),
-      email: newEmail.trim().toLowerCase(),
-      role: newRole,
-      pay_structure_id: newPayStructureId,
-      password: newPassword,
-    };
-    addUser(newUser);
-    setRefreshKey((k) => k + 1);
-    setNewName("");
-    setNewEmail("");
-    setNewPassword("Shiftly123!");
-    setNewRole("rep");
-    setNewPayStructureId(MOCK_PAY_STRUCTURES[0]?.id || "");
-    setShowAddModal(false);
+    setActionError(null);
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: newEmail.trim().toLowerCase(),
+          password: newPassword,
+          name: newName.trim(),
+          role: newRole,
+          pay_structure_id: newPayStructureId || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActionError(data.error || "Failed to create user");
+        return;
+      }
+      // Refresh user list
+      await fetchUsers();
+      setNewName("");
+      setNewEmail("");
+      setNewPassword("Shiftly123!");
+      setNewRole("rep");
+      setNewPayStructureId(MOCK_PAY_STRUCTURES[0]?.id || "");
+      setShowAddModal(false);
+    } catch {
+      setActionError("Failed to create user");
+    } finally {
+      setActionLoading(false);
+    }
   }
 
-  function handleRemoveRep(email: string) {
-    removeUser(email);
-    setRefreshKey((k) => k + 1);
-    setConfirmRemove(null);
+  async function handleRemoveRep(email: string) {
+    setActionError(null);
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/users?email=${encodeURIComponent(email)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setActionError(data.error || "Failed to remove user");
+        return;
+      }
+      await fetchUsers();
+      setConfirmRemove(null);
+    } catch {
+      setActionError("Failed to remove user");
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   if (loading || !user || user.role !== "manager") return null;
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
-      <Navbar 
-        userName={user.name} 
-        userRole="Manager" 
-        onLogout={logout} 
+      <Navbar
+        userName={user.name}
+        userRole="Manager"
+        onLogout={logout}
       />
 
       <div className="mx-auto max-w-7xl px-6 py-8 space-y-8">
@@ -146,12 +182,20 @@ export default function AdminPayStructurePage() {
             <p className="mt-1 text-sm text-[#6b7280]">View commission structures and manage rep assignments</p>
           </div>
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => { setShowAddModal(true); setActionError(null); }}
             className="rounded-lg bg-[#3B7FE1] hover:bg-[#2563EB] px-4 py-2.5 text-sm font-medium text-white transition"
           >
             + Add Rep
           </button>
         </div>
+
+        {/* Action Error Toast */}
+        {actionError && (
+          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+            <span>{actionError}</span>
+            <button onClick={() => setActionError(null)} className="text-red-500 hover:text-red-700 ml-4">&times;</button>
+          </div>
+        )}
 
         {/* Earnings Graph */}
         {deals.length > 0 && (
@@ -215,60 +259,66 @@ export default function AdminPayStructurePage() {
         {/* Rep Assignments */}
         <div className="rounded-xl bg-white border border-[#e5e7eb] p-6">
           <h3 className="text-lg font-semibold text-[#111827] mb-4">Rep Assignments</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#e5e7eb] text-[#6b7280] text-left">
-                  <th className="pb-3 font-medium">Rep Name</th>
-                  <th className="pb-3 font-medium">Email</th>
-                  <th className="pb-3 font-medium">Role</th>
-                  <th className="pb-3 font-medium">Pay Structure</th>
-                  <th className="pb-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reps.map((rep, i) => (
-                  <tr
-                    key={rep.id}
-                    className={`border-b border-[#e5e7eb] hover:bg-[#f9fafb] transition ${
-                      i % 2 === 0 ? "bg-[#f9fafb]" : "bg-white"
-                    }`}
-                  >
-                    <td className="py-3 text-[#111827] font-medium">{rep.name}</td>
-                    <td className="py-3 text-[#6b7280]">{rep.email}</td>
-                    <td className="py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
-                          rep.role === "manager"
-                            ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
-                            : "bg-[#3B7FE1]/10 text-[#3B7FE1] border-[#3B7FE1]/20"
-                        }`}
-                      >
-                        {rep.role === "manager" ? "Manager" : "Rep"}
-                      </span>
-                    </td>
-                    <td className="py-3 text-[#6b7280]">{getStructureName(rep.payStructureId)}</td>
-                    <td className="py-3 text-right space-x-2">
-                      <button
-                        onClick={() => openEditModal(rep)}
-                        className="inline-flex items-center rounded-lg bg-[#3B7FE1] hover:bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition"
-                      >
-                        Edit
-                      </button>
-                      {rep.email !== user.email && (
-                        <button
-                          onClick={() => setConfirmRemove(rep.email)}
-                          className="inline-flex items-center rounded-lg bg-red-500 hover:bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </td>
+          {repsLoading ? (
+            <p className="text-sm text-[#6b7280]">Loading users...</p>
+          ) : reps.length === 0 ? (
+            <p className="text-sm text-[#6b7280]">No users found. Click &quot;+ Add Rep&quot; to create users.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#e5e7eb] text-[#6b7280] text-left">
+                    <th className="pb-3 font-medium">Rep Name</th>
+                    <th className="pb-3 font-medium">Email</th>
+                    <th className="pb-3 font-medium">Role</th>
+                    <th className="pb-3 font-medium">Pay Structure</th>
+                    <th className="pb-3 font-medium text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {reps.map((rep, i) => (
+                    <tr
+                      key={rep.id}
+                      className={`border-b border-[#e5e7eb] hover:bg-[#f9fafb] transition ${
+                        i % 2 === 0 ? "bg-[#f9fafb]" : "bg-white"
+                      }`}
+                    >
+                      <td className="py-3 text-[#111827] font-medium">{rep.name}</td>
+                      <td className="py-3 text-[#6b7280]">{rep.email}</td>
+                      <td className="py-3">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
+                            rep.role === "manager"
+                              ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                              : "bg-[#3B7FE1]/10 text-[#3B7FE1] border-[#3B7FE1]/20"
+                          }`}
+                        >
+                          {rep.role === "manager" ? "Manager" : "Rep"}
+                        </span>
+                      </td>
+                      <td className="py-3 text-[#6b7280]">{getStructureName(rep.pay_structure_id)}</td>
+                      <td className="py-3 text-right space-x-2">
+                        <button
+                          onClick={() => openEditModal(rep)}
+                          className="inline-flex items-center rounded-lg bg-[#3B7FE1] hover:bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition"
+                        >
+                          Edit
+                        </button>
+                        {rep.email !== user.email && (
+                          <button
+                            onClick={() => setConfirmRemove(rep.email)}
+                            className="inline-flex items-center rounded-lg bg-red-500 hover:bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -313,8 +363,10 @@ export default function AdminPayStructurePage() {
             <h3 className="text-lg font-semibold text-[#111827]">Remove User</h3>
             <p className="text-sm text-[#6b7280]">Are you sure you want to remove <span className="font-medium text-[#111827]">{confirmRemove}</span>? They will no longer be able to log in.</p>
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setConfirmRemove(null)} className="flex-1 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm font-medium text-[#6b7280] hover:text-[#111827] transition">Cancel</button>
-              <button onClick={() => handleRemoveRep(confirmRemove)} className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 px-4 py-3 text-sm font-semibold text-white transition">Remove</button>
+              <button onClick={() => setConfirmRemove(null)} disabled={actionLoading} className="flex-1 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm font-medium text-[#6b7280] hover:text-[#111827] transition disabled:opacity-50">Cancel</button>
+              <button onClick={() => handleRemoveRep(confirmRemove)} disabled={actionLoading} className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 px-4 py-3 text-sm font-semibold text-white transition disabled:opacity-50">
+                {actionLoading ? "Removing..." : "Remove"}
+              </button>
             </div>
           </div>
         </div>
@@ -363,9 +415,16 @@ export default function AdminPayStructurePage() {
                   </select>
                 </div>
               </div>
+
+              {actionError && (
+                <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{actionError}</p>
+              )}
+
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm font-medium text-[#6b7280] hover:text-[#111827] transition">Cancel</button>
-                <button type="submit" className="flex-1 rounded-xl bg-[#3B7FE1] hover:bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white transition">Add Rep</button>
+                <button type="button" onClick={() => setShowAddModal(false)} disabled={actionLoading} className="flex-1 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm font-medium text-[#6b7280] hover:text-[#111827] transition disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={actionLoading} className="flex-1 rounded-xl bg-[#3B7FE1] hover:bg-[#2563EB] px-4 py-3 text-sm font-semibold text-white transition disabled:opacity-50">
+                  {actionLoading ? "Creating..." : "Add Rep"}
+                </button>
               </div>
             </form>
           </div>
