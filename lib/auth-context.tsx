@@ -4,11 +4,17 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "./supabase";
 import { AppUser } from "./types";
 
+export type DemoUser = AppUser & { password: string };
+
 interface AuthState {
   user: AppUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ error: string | null }>;
+  addUser: (user: DemoUser) => void;
+  removeUser: (email: string) => void;
+  getUsers: () => DemoUser[];
 }
 
 const AuthContext = createContext<AuthState>({
@@ -16,35 +22,88 @@ const AuthContext = createContext<AuthState>({
   loading: true,
   login: async () => ({ error: "Not initialized" }),
   logout: async () => {},
+  changePassword: async () => ({ error: "Not initialized" }),
+  addUser: () => {},
+  removeUser: () => {},
+  getUsers: () => [],
 });
 
-// Demo mode fallback users (when Supabase is not configured)
-const DEMO_USERS: Record<string, AppUser & { password: string }> = {
-  "sarah@shiftlyauto.com": {
-    id: "demo-sarah",
-    email: "sarah@shiftlyauto.com",
-    name: "Sarah Mitchell",
+// Default demo users (when Supabase is not configured)
+const DEFAULT_DEMO_USERS: Record<string, DemoUser> = {
+  "ryan@shiftlyauto.com": {
+    id: "demo-ryan",
+    email: "ryan@shiftlyauto.com",
+    name: "Ryan",
     role: "manager",
-    pay_structure_id: "00000000-0000-0000-0000-000000000001",
-    password: "Shiftly123!",
-  },
-  "mike@shiftlyauto.com": {
-    id: "demo-mike",
-    email: "mike@shiftlyauto.com",
-    name: "Mike Torres",
-    role: "rep",
     pay_structure_id: "00000000-0000-0000-0000-000000000001",
     password: "Shiftly123!",
   },
   "jr@shiftlyauto.com": {
     id: "demo-jr",
     email: "jr@shiftlyauto.com",
-    name: "JR Patel",
+    name: "JR",
     role: "rep",
     pay_structure_id: "00000000-0000-0000-0000-000000000002",
     password: "Shiftly123!",
   },
+  "anthony@shiftlyauto.com": {
+    id: "demo-anthony",
+    email: "anthony@shiftlyauto.com",
+    name: "Anthony",
+    role: "rep",
+    pay_structure_id: "00000000-0000-0000-0000-000000000001",
+    password: "Shiftly123!",
+  },
+  "dawson@shiftlyauto.com": {
+    id: "demo-dawson",
+    email: "dawson@shiftlyauto.com",
+    name: "Dawson",
+    role: "rep",
+    pay_structure_id: "00000000-0000-0000-0000-000000000001",
+    password: "Shiftly123!",
+  },
+  "gdykema@shiftlyauto.com": {
+    id: "demo-gdykema",
+    email: "gdykema@shiftlyauto.com",
+    name: "G Dykema",
+    role: "rep",
+    pay_structure_id: "00000000-0000-0000-0000-000000000001",
+    password: "Shiftly123!",
+  },
+  "alex@shiftlyauto.com": {
+    id: "demo-alex",
+    email: "alex@shiftlyauto.com",
+    name: "Alex",
+    role: "rep",
+    pay_structure_id: "00000000-0000-0000-0000-000000000001",
+    password: "Shiftly123!",
+  },
+  "jeremy@shiftlyauto.com": {
+    id: "demo-jeremy",
+    email: "jeremy@shiftlyauto.com",
+    name: "Jeremy",
+    role: "rep",
+    pay_structure_id: "00000000-0000-0000-0000-000000000001",
+    password: "Shiftly123!",
+  },
 };
+
+function loadDemoUsers(): Record<string, DemoUser> {
+  if (typeof window === "undefined") return { ...DEFAULT_DEMO_USERS };
+  const stored = localStorage.getItem("shiftly_demo_users");
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      // ignore
+    }
+  }
+  return { ...DEFAULT_DEMO_USERS };
+}
+
+function saveDemoUsers(users: Record<string, DemoUser>) {
+  localStorage.setItem("shiftly_demo_users", JSON.stringify(users));
+}
 
 function isSupabaseConfigured(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -54,6 +113,7 @@ function isSupabaseConfigured(): boolean {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [demoUsers, setDemoUsers] = useState<Record<string, DemoUser>>({});
 
   useEffect(() => {
     if (isSupabaseConfigured()) {
@@ -76,6 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return () => listener.subscription.unsubscribe();
     } else {
+      const users = loadDemoUsers();
+      setDemoUsers(users);
       const stored = localStorage.getItem("shiftly_user");
       if (stored) {
         try {
@@ -109,7 +171,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Demo mode
-    const demoUser = DEMO_USERS[email.toLowerCase()];
+    const currentUsers = loadDemoUsers();
+    const demoUser = currentUsers[email.toLowerCase()];
     if (!demoUser || demoUser.password !== password) {
       return { error: "Invalid email or password" };
     }
@@ -118,6 +181,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userWithoutPassword);
     localStorage.setItem("shiftly_user", JSON.stringify(userWithoutPassword));
     return { error: null };
+  }
+
+  async function changePassword(currentPassword: string, newPassword: string): Promise<{ error: string | null }> {
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { error: error.message };
+      return { error: null };
+    }
+
+    // Demo mode
+    if (!user) return { error: "Not logged in" };
+    const currentUsers = loadDemoUsers();
+    const demoUser = currentUsers[user.email.toLowerCase()];
+    if (!demoUser) return { error: "User not found" };
+    if (demoUser.password !== currentPassword) return { error: "Current password is incorrect" };
+
+    demoUser.password = newPassword;
+    currentUsers[user.email.toLowerCase()] = demoUser;
+    saveDemoUsers(currentUsers);
+    setDemoUsers(currentUsers);
+    return { error: null };
+  }
+
+  function addUser(newUser: DemoUser) {
+    const currentUsers = loadDemoUsers();
+    currentUsers[newUser.email.toLowerCase()] = newUser;
+    saveDemoUsers(currentUsers);
+    setDemoUsers({ ...currentUsers });
+  }
+
+  function removeUser(email: string) {
+    const currentUsers = loadDemoUsers();
+    delete currentUsers[email.toLowerCase()];
+    saveDemoUsers(currentUsers);
+    setDemoUsers({ ...currentUsers });
+  }
+
+  function getUsers(): DemoUser[] {
+    return Object.values(demoUsers);
   }
 
   async function logout() {
@@ -129,7 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, changePassword, addUser, removeUser, getUsers }}>
       {children}
     </AuthContext.Provider>
   );

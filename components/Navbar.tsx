@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 interface NavbarProps {
   userName: string;
@@ -13,6 +14,8 @@ interface NavbarProps {
 const TABS = ["Earnings", "Deals", "Activity Log"];
 
 export default function Navbar({ userName, userRole, onLogout, activeTab = "Earnings", onTabChange }: NavbarProps) {
+  const router = useRouter();
+
   return (
     <nav className="sticky top-0 z-40 bg-black">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
@@ -49,7 +52,7 @@ export default function Navbar({ userName, userRole, onLogout, activeTab = "Earn
           </div>
         </div>
 
-        {/* User Info + Logout */}
+        {/* User Info + Settings + Logout */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-white/70">{userName}</span>
@@ -57,6 +60,12 @@ export default function Navbar({ userName, userRole, onLogout, activeTab = "Earn
               {userRole}
             </span>
           </div>
+          <button
+            onClick={() => router.push("/settings")}
+            className="rounded-lg bg-white/10 hover:bg-white/20 px-3 py-1.5 text-xs font-medium text-white transition"
+          >
+            Settings
+          </button>
           <button
             onClick={onLogout}
             className="rounded-lg bg-[#0066FF] hover:bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition"

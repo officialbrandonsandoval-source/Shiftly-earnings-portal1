@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, DemoUser } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Deal, PayStructure } from "@/lib/types";
@@ -10,34 +10,34 @@ import { formatPercent, formatCurrency, getMonthKey } from "@/lib/utils";
 import EarningsGraph from "@/components/EarningsGraph";
 import Navbar from "@/components/Navbar";
 
-interface DemoRep {
-  id: string;
-  name: string;
-  email: string;
-  role: "manager" | "rep";
-  payStructureId: string;
-}
-
-const INITIAL_REPS: DemoRep[] = [
-  { id: "demo-sarah", name: "Sarah Mitchell", email: "sarah@shiftlyauto.com", role: "manager", payStructureId: "00000000-0000-0000-0000-000000000001" },
-  { id: "demo-mike", name: "Mike Torres", email: "mike@shiftlyauto.com", role: "rep", payStructureId: "00000000-0000-0000-0000-000000000001" },
-  { id: "demo-jr", name: "JR Patel", email: "jr@shiftlyauto.com", role: "rep", payStructureId: "00000000-0000-0000-0000-000000000002" },
-];
-
 export default function AdminPayStructurePage() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, addUser, removeUser, getUsers } = useAuth();
   const router = useRouter();
 
   const [payStructures] = useState<PayStructure[]>(MOCK_PAY_STRUCTURES);
-  const [reps, setReps] = useState<DemoRep[]>(INITIAL_REPS);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const [editingRep, setEditingRep] = useState<DemoRep | null>(null);
+  const reps = useMemo(() => {
+    const users = getUsers();
+    return users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      payStructureId: u.pay_structure_id || "00000000-0000-0000-0000-000000000001",
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getUsers, refreshKey]);
+
+  const [editingRep, setEditingRep] = useState<{ id: string; name: string; email: string; role: "manager" | "rep"; payStructureId: string } | null>(null);
   const [editPayStructureId, setEditPayStructureId] = useState("");
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("Shiftly123!");
   const [newRole, setNewRole] = useState<"manager" | "rep">("rep");
   const [newPayStructureId, setNewPayStructureId] = useState(MOCK_PAY_STRUCTURES[0]?.id || "");
 
@@ -86,36 +86,46 @@ export default function AdminPayStructurePage() {
     return payStructures.find((ps) => ps.id === id)?.name || "Unknown";
   }
 
-  function openEditModal(rep: DemoRep) {
+  function openEditModal(rep: { id: string; name: string; email: string; role: "manager" | "rep"; payStructureId: string }) {
     setEditingRep(rep);
     setEditPayStructureId(rep.payStructureId);
   }
 
   function saveEditPayStructure() {
     if (!editingRep) return;
-    setReps((prev) =>
-      prev.map((r) =>
-        r.id === editingRep.id ? { ...r, payStructureId: editPayStructureId } : r
-      )
-    );
+    const users = getUsers();
+    const existing = users.find((u) => u.email.toLowerCase() === editingRep.email.toLowerCase());
+    if (existing) {
+      addUser({ ...existing, pay_structure_id: editPayStructureId });
+      setRefreshKey((k) => k + 1);
+    }
     setEditingRep(null);
   }
 
   function handleAddRep(e: React.FormEvent) {
     e.preventDefault();
-    const newRep: DemoRep = {
+    const newUser: DemoUser = {
       id: `demo-${Date.now()}`,
       name: newName.trim(),
       email: newEmail.trim().toLowerCase(),
       role: newRole,
-      payStructureId: newPayStructureId,
+      pay_structure_id: newPayStructureId,
+      password: newPassword,
     };
-    setReps((prev) => [...prev, newRep]);
+    addUser(newUser);
+    setRefreshKey((k) => k + 1);
     setNewName("");
     setNewEmail("");
+    setNewPassword("Shiftly123!");
     setNewRole("rep");
     setNewPayStructureId(MOCK_PAY_STRUCTURES[0]?.id || "");
     setShowAddModal(false);
+  }
+
+  function handleRemoveRep(email: string) {
+    removeUser(email);
+    setRefreshKey((k) => k + 1);
+    setConfirmRemove(null);
   }
 
   if (loading || !user || user.role !== "manager") return null;
@@ -238,13 +248,21 @@ export default function AdminPayStructurePage() {
                       </span>
                     </td>
                     <td className="py-3 text-[#6b7280]">{getStructureName(rep.payStructureId)}</td>
-                    <td className="py-3 text-right">
+                    <td className="py-3 text-right space-x-2">
                       <button
                         onClick={() => openEditModal(rep)}
                         className="inline-flex items-center rounded-lg bg-[#3B7FE1] hover:bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition"
                       >
                         Edit
                       </button>
+                      {rep.email !== user.email && (
+                        <button
+                          onClick={() => setConfirmRemove(rep.email)}
+                          className="inline-flex items-center rounded-lg bg-red-500 hover:bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -288,6 +306,20 @@ export default function AdminPayStructurePage() {
         </div>
       )}
 
+      {/* Confirm Remove Modal */}
+      {confirmRemove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white border border-[#e5e7eb] shadow-2xl p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-[#111827]">Remove User</h3>
+            <p className="text-sm text-[#6b7280]">Are you sure you want to remove <span className="font-medium text-[#111827]">{confirmRemove}</span>? They will no longer be able to log in.</p>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setConfirmRemove(null)} className="flex-1 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm font-medium text-[#6b7280] hover:text-[#111827] transition">Cancel</button>
+              <button onClick={() => handleRemoveRep(confirmRemove)} className="flex-1 rounded-xl bg-red-500 hover:bg-red-600 px-4 py-3 text-sm font-semibold text-white transition">Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Rep Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -305,6 +337,11 @@ export default function AdminPayStructurePage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-[#6b7280] uppercase tracking-wider">Email</label>
                 <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required placeholder="jane@shiftlyauto.com"
+                  className="w-full rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] placeholder-[#9ca3af] focus:border-[#3B7FE1] focus:outline-none" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[#6b7280] uppercase tracking-wider">Password</label>
+                <input type="text" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required placeholder="Shiftly123!"
                   className="w-full rounded-xl bg-[#f9fafb] border border-[#e5e7eb] px-4 py-3 text-sm text-[#111827] placeholder-[#9ca3af] focus:border-[#3B7FE1] focus:outline-none" />
               </div>
               <div className="grid grid-cols-2 gap-4">
