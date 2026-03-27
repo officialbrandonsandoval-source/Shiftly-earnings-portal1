@@ -13,10 +13,12 @@ import { getPayStructureForEmail } from "@/lib/mock-data";
 import Navbar from "@/components/Navbar";
 import {
   formatCurrency,
+  formatDate,
   getMonthKey,
   getMonthLabel,
   getCurrentMonthKey,
   getAvailableMonths,
+  isFirstHalf,
   downloadCSV,
 } from "@/lib/utils";
 import {
@@ -40,6 +42,18 @@ interface DealWithCommission extends Deal {
   commission: CommissionResult;
 }
 
+interface ActivityLog {
+  id: string;
+  rep_email: string;
+  rep_name: string;
+  log_date: string;
+  scheduled_calls: number;
+  shown_calls: number;
+  sold_deals: number;
+  revenue_collected: number;
+  no_shows: number;
+}
+
 export default function ManagerDashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
@@ -49,6 +63,8 @@ export default function ManagerDashboard() {
   const [fetchLoading, setFetchLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("Earnings");
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "manager")) {
@@ -73,6 +89,15 @@ export default function ManagerDashboard() {
     if (user?.role === "manager") {
       fetchDeals();
     }
+  }, [user]);
+
+  // Fetch activity logs for manager (all reps)
+  useEffect(() => {
+    if (!user || user.role !== "manager") return;
+    fetch(`/api/activity?role=manager`)
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setActivityLogs(data); })
+      .catch(() => {});
   }, [user]);
 
   const availableMonths = useMemo(
@@ -203,6 +228,16 @@ export default function ManagerDashboard() {
       }));
   }, [dealsWithCommission]);
 
+  // Deals split into front/back half
+  const frontHalfDeals = useMemo(
+    () => dealsWithCommission.filter((d) => isFirstHalf(d.date)).sort((a, b) => a.date.localeCompare(b.date)),
+    [dealsWithCommission]
+  );
+  const backHalfDeals = useMemo(
+    () => dealsWithCommission.filter((d) => !isFirstHalf(d.date)).sort((a, b) => a.date.localeCompare(b.date)),
+    [dealsWithCommission]
+  );
+
   async function handleSyncSheet() {
     setSyncing(true);
     setSyncMessage(null);
@@ -216,7 +251,6 @@ export default function ManagerDashboard() {
         a.download = res.headers.get("Content-Disposition")?.split("filename=")[1]?.replace(/"/g, "") || "deals-sync.csv";
         a.click();
         URL.revokeObjectURL(url);
-        // Count rows (subtract header)
         const text = await blob.text();
         const count = text.trim().split("\n").length - 1;
         setSyncMessage(`${count} deal${count !== 1 ? "s" : ""} synced`);
@@ -289,14 +323,16 @@ export default function ManagerDashboard() {
           {syncMessage}
         </div>
       )}
-      <Navbar 
-        userName={user.name} 
-        userRole="Manager" 
-        onLogout={logout} 
+      <Navbar
+        userName={user.name}
+        userRole="Manager"
+        onLogout={logout}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Month Selector */}
+        {/* Top Controls */}
         <div className="flex flex-wrap items-center gap-4">
           <select
             value={selectedMonth}
@@ -319,227 +355,390 @@ export default function ManagerDashboard() {
           </button>
           <div className="ml-auto flex items-center gap-3">
             <button
-              onClick={handleSyncSheet}
-              disabled={syncing}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-[#10B981] hover:bg-[#059669] text-white transition-colors disabled:opacity-50"
+              onClick={() => router.push("/dashboard/admin")}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-purple-600 hover:bg-purple-700 text-white transition-colors"
             >
-              {syncing ? "Syncing..." : "Sync to Sheet"}
+              Manage Users
             </button>
-            <button
-              onClick={handleExportCSV}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-[#0066FF] hover:bg-[#2563EB] text-white transition-colors"
-            >
-              Export CSV
-            </button>
+            {activeTab === "Earnings" && (
+              <>
+                <button
+                  onClick={handleSyncSheet}
+                  disabled={syncing}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-[#10B981] hover:bg-[#059669] text-white transition-colors disabled:opacity-50"
+                >
+                  {syncing ? "Syncing..." : "Sync to Sheet"}
+                </button>
+                <button
+                  onClick={handleExportCSV}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-[#0066FF] hover:bg-[#2563EB] text-white transition-colors"
+                >
+                  Export CSV
+                </button>
+              </>
+            )}
+            {activeTab === "Deals" && (
+              <button
+                onClick={handleExportCSV}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-[#0066FF] hover:bg-[#2563EB] text-white transition-colors"
+              >
+                Export CSV
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Earnings Graph */}
-        <EarningsGraph deals={filteredDeals} getCommission={getCommission} />
+        {/* ===== EARNINGS TAB ===== */}
+        {activeTab === "Earnings" && (
+          <>
+            {/* Earnings Graph */}
+            <EarningsGraph deals={filteredDeals} getCommission={getCommission} />
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {[
-            { label: "Total MRR Sold", value: formatCurrency(summary.totalMRR) },
-            { label: "Total Setup Fees", value: formatCurrency(summary.totalSetup) },
-            { label: "Total Revenue", value: formatCurrency(summary.totalRevenue) },
-            { label: "Total Deals Closed", value: String(summary.totalDeals) },
-            { label: "Commission Paid Out", value: formatCurrency(summary.totalCommission) },
-          ].map((card) => (
-            <div
-              key={card.label}
-              className="bg-white border border-[#E5E7EB] border-l-[3px] border-l-[#0066FF] rounded-xl p-5"
-            >
-              <p className="text-[#6B7280] text-xs font-medium uppercase tracking-wider mb-1">
-                {card.label}
-              </p>
-              <p className="text-2xl font-bold text-[#1F2937]">{card.value}</p>
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {[
+                { label: "Total MRR Sold", value: formatCurrency(summary.totalMRR) },
+                { label: "Total Setup Fees", value: formatCurrency(summary.totalSetup) },
+                { label: "Total Revenue", value: formatCurrency(summary.totalRevenue) },
+                { label: "Total Deals Closed", value: String(summary.totalDeals) },
+                { label: "Commission Paid Out", value: formatCurrency(summary.totalCommission) },
+              ].map((card) => (
+                <div
+                  key={card.label}
+                  className="bg-white border border-[#E5E7EB] border-l-[3px] border-l-[#0066FF] rounded-xl p-5"
+                >
+                  <p className="text-[#6B7280] text-xs font-medium uppercase tracking-wider mb-1">
+                    {card.label}
+                  </p>
+                  <p className="text-2xl font-bold text-[#1F2937]">{card.value}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Product Breakdown */}
-        <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#E5E7EB]">
-            <h2 className="text-lg font-semibold text-[#1F2937]">Product Breakdown</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] text-xs uppercase tracking-wider">
-                  <th className="text-left px-5 py-3">Product</th>
-                  <th className="text-right px-5 py-3"># Deals</th>
-                  <th className="text-right px-5 py-3">MRR</th>
-                  <th className="text-right px-5 py-3">Setup</th>
-                  <th className="text-right px-5 py-3">Total Rev</th>
-                  <th className="text-right px-5 py-3">Commission</th>
-                </tr>
-              </thead>
-              <tbody>
-                {productBreakdown.map((row, i) => (
-                  <tr
-                    key={row.product}
-                    className={`border-b border-[#E5E7EB] hover:bg-[#F9FAFB] transition-colors ${
-                      i % 2 === 0 ? "bg-white" : "bg-[#F9FAFB]"
-                    }`}
-                  >
-                    <td className="px-5 py-3 font-medium text-[#1F2937]">{row.product}</td>
-                    <td className="px-5 py-3 text-right text-[#6B7280]">{row.deals}</td>
-                    <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(row.mrr)}</td>
-                    <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(row.setup)}</td>
-                    <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(row.totalRev)}</td>
-                    <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(row.commission)}</td>
-                  </tr>
-                ))}
-                <tr className="bg-[#F9FAFB] font-semibold">
-                  <td className="px-5 py-3 text-[#1F2937]">TOTAL</td>
-                  <td className="px-5 py-3 text-right text-[#1F2937]">{productTotals.deals}</td>
-                  <td className="px-5 py-3 text-right text-[#1F2937]">{formatCurrency(productTotals.mrr)}</td>
-                  <td className="px-5 py-3 text-right text-[#1F2937]">{formatCurrency(productTotals.setup)}</td>
-                  <td className="px-5 py-3 text-right text-[#1F2937]">{formatCurrency(productTotals.totalRev)}</td>
-                  <td className="px-5 py-3 text-right text-[#1F2937]">{formatCurrency(productTotals.commission)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Rep Leaderboard */}
-        <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#E5E7EB]">
-            <h2 className="text-lg font-semibold text-[#1F2937]">Rep Leaderboard</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] text-xs uppercase tracking-wider">
-                  <th className="text-left px-5 py-3">Rank</th>
-                  <th className="text-left px-5 py-3">Name</th>
-                  <th className="text-right px-5 py-3">Commission</th>
-                  <th className="text-right px-5 py-3">MRR Sold</th>
-                  <th className="text-right px-5 py-3">Deals</th>
-                  <th className="text-center px-5 py-3">Tier</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaderboard.map((rep, i) => (
-                  <tr
-                    key={rep.email}
-                    className={`border-b border-[#E5E7EB]/50 hover:bg-[#F9FAFB] transition-colors ${
-                      i % 2 === 0 ? "bg-white" : "bg-[#F9FAFB]"
-                    }`}
-                  >
-                    <td className="px-5 py-3 font-medium text-[#6B7280]">#{rep.rank}</td>
-                    <td className="px-5 py-3 font-medium text-[#1F2937]">{rep.name}</td>
-                    <td className="px-5 py-3 text-right text-[#10B981] font-semibold">
-                      {formatCurrency(rep.commission)}
-                    </td>
-                    <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(rep.mrr)}</td>
-                    <td className="px-5 py-3 text-right text-[#6B7280]">{rep.deals}</td>
-                    <td className="px-5 py-3 text-center">
-                      <TierBadge tier={rep.tier} />
-                    </td>
-                  </tr>
-                ))}
-                {leaderboard.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-[#6B7280]">
-                      No deals found for this period.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-[#1F2937] mb-4">Month-over-Month</h2>
-            {momData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={momData}>
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fill: "#6B7280", fontSize: 12 }}
-                    axisLine={{ stroke: "#E5E7EB" }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    yAxisId="mrr"
-                    orientation="left"
-                    tick={{ fill: "#6B7280", fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
-                  />
-                  <YAxis
-                    yAxisId="deals"
-                    orientation="right"
-                    tick={{ fill: "#6B7280", fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#FFFFFF",
-                      border: "1px solid #E5E7EB",
-                      borderRadius: "8px",
-                      color: "#1F2937",
-                    }}
-                    formatter={((value: number, name: string) =>
-                      name === "MRR" ? [formatCurrency(Number(value)), name] : [value, name]
-                    ) as never}
-                  />
-                  <Bar yAxisId="mrr" dataKey="MRR" fill="#0066FF" radius={[4, 4, 0, 0]} />
-                  <Bar yAxisId="deals" dataKey="Deals" fill="#10B981" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-[#6B7280]">
-                No data available
+            {/* Product Breakdown */}
+            <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-[#E5E7EB]">
+                <h2 className="text-lg font-semibold text-[#1F2937]">Product Breakdown</h2>
               </div>
-            )}
-          </div>
-
-          <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
-            <h2 className="text-lg font-semibold text-[#1F2937] mb-4">Term Breakdown</h2>
-            {termData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={termData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={110}
-                    paddingAngle={3}
-                    dataKey="value"
-                    label={((props: { name: string; pct: string }) => `${props.name} (${props.pct}%)`) as never}
-                  >
-                    {termData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] text-xs uppercase tracking-wider">
+                      <th className="text-left px-5 py-3">Product</th>
+                      <th className="text-right px-5 py-3"># Deals</th>
+                      <th className="text-right px-5 py-3">MRR</th>
+                      <th className="text-right px-5 py-3">Setup</th>
+                      <th className="text-right px-5 py-3">Total Rev</th>
+                      <th className="text-right px-5 py-3">Commission</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productBreakdown.map((row, i) => (
+                      <tr
+                        key={row.product}
+                        className={`border-b border-[#E5E7EB] hover:bg-[#F9FAFB] transition-colors ${
+                          i % 2 === 0 ? "bg-white" : "bg-[#F9FAFB]"
+                        }`}
+                      >
+                        <td className="px-5 py-3 font-medium text-[#1F2937]">{row.product}</td>
+                        <td className="px-5 py-3 text-right text-[#6B7280]">{row.deals}</td>
+                        <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(row.mrr)}</td>
+                        <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(row.setup)}</td>
+                        <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(row.totalRev)}</td>
+                        <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(row.commission)}</td>
+                      </tr>
                     ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#FFFFFF",
-                      border: "1px solid #E5E7EB",
-                      borderRadius: "8px",
-                      color: "#1F2937",
-                    }}
-                    formatter={((value: number) => [`${value} deals`, "Count"]) as never}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                    <tr className="bg-[#F9FAFB] font-semibold">
+                      <td className="px-5 py-3 text-[#1F2937]">TOTAL</td>
+                      <td className="px-5 py-3 text-right text-[#1F2937]">{productTotals.deals}</td>
+                      <td className="px-5 py-3 text-right text-[#1F2937]">{formatCurrency(productTotals.mrr)}</td>
+                      <td className="px-5 py-3 text-right text-[#1F2937]">{formatCurrency(productTotals.setup)}</td>
+                      <td className="px-5 py-3 text-right text-[#1F2937]">{formatCurrency(productTotals.totalRev)}</td>
+                      <td className="px-5 py-3 text-right text-[#1F2937]">{formatCurrency(productTotals.commission)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Rep Leaderboard */}
+            <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-[#E5E7EB]">
+                <h2 className="text-lg font-semibold text-[#1F2937]">Rep Leaderboard</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] text-xs uppercase tracking-wider">
+                      <th className="text-left px-5 py-3">Rank</th>
+                      <th className="text-left px-5 py-3">Name</th>
+                      <th className="text-right px-5 py-3">Commission</th>
+                      <th className="text-right px-5 py-3">MRR Sold</th>
+                      <th className="text-right px-5 py-3">Deals</th>
+                      <th className="text-center px-5 py-3">Tier</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboard.map((rep, i) => (
+                      <tr
+                        key={rep.email}
+                        className={`border-b border-[#E5E7EB]/50 hover:bg-[#F9FAFB] transition-colors ${
+                          i % 2 === 0 ? "bg-white" : "bg-[#F9FAFB]"
+                        }`}
+                      >
+                        <td className="px-5 py-3 font-medium text-[#6B7280]">#{rep.rank}</td>
+                        <td className="px-5 py-3 font-medium text-[#1F2937]">{rep.name}</td>
+                        <td className="px-5 py-3 text-right text-[#10B981] font-semibold">
+                          {formatCurrency(rep.commission)}
+                        </td>
+                        <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(rep.mrr)}</td>
+                        <td className="px-5 py-3 text-right text-[#6B7280]">{rep.deals}</td>
+                        <td className="px-5 py-3 text-center">
+                          <TierBadge tier={rep.tier} />
+                        </td>
+                      </tr>
+                    ))}
+                    {leaderboard.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-8 text-center text-[#6B7280]">
+                          No deals found for this period.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+                <h2 className="text-lg font-semibold text-[#1F2937] mb-4">Month-over-Month</h2>
+                {momData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={momData}>
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fill: "#6B7280", fontSize: 12 }}
+                        axisLine={{ stroke: "#E5E7EB" }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        yAxisId="mrr"
+                        orientation="left"
+                        tick={{ fill: "#6B7280", fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+                      />
+                      <YAxis
+                        yAxisId="deals"
+                        orientation="right"
+                        tick={{ fill: "#6B7280", fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#FFFFFF",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "8px",
+                          color: "#1F2937",
+                        }}
+                        formatter={((value: number, name: string) =>
+                          name === "MRR" ? [formatCurrency(Number(value)), name] : [value, name]
+                        ) as never}
+                      />
+                      <Bar yAxisId="mrr" dataKey="MRR" fill="#0066FF" radius={[4, 4, 0, 0]} />
+                      <Bar yAxisId="deals" dataKey="Deals" fill="#10B981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-[#6B7280]">
+                    No data available
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+                <h2 className="text-lg font-semibold text-[#1F2937] mb-4">Term Breakdown</h2>
+                {termData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={termData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={110}
+                        paddingAngle={3}
+                        dataKey="value"
+                        label={((props: { name: string; pct: string }) => `${props.name} (${props.pct}%)`) as never}
+                      >
+                        {termData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#FFFFFF",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "8px",
+                          color: "#1F2937",
+                        }}
+                        formatter={((value: number) => [`${value} deals`, "Count"]) as never}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-[#6B7280]">
+                    No data available
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ===== DEALS TAB ===== */}
+        {activeTab === "Deals" && (
+          <>
+            {dealsWithCommission.length === 0 ? (
+              <div className="rounded-xl bg-white border border-[#E5E7EB] p-12 text-center">
+                <p className="text-[#6B7280] text-sm">No deals found for this period.</p>
+              </div>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-[#6B7280]">
-                No data available
+              <>
+                {/* Front Half */}
+                {frontHalfDeals.length > 0 && (
+                  <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
+                    <div className="px-5 py-4 border-b border-[#E5E7EB]">
+                      <h2 className="text-lg font-semibold text-[#1F2937]">Front of Month (1st-15th)</h2>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] text-xs uppercase tracking-wider">
+                            <th className="text-left px-5 py-3">Date</th>
+                            <th className="text-left px-5 py-3">Rep</th>
+                            <th className="text-left px-5 py-3">Client</th>
+                            <th className="text-left px-5 py-3">Dealer</th>
+                            <th className="text-left px-5 py-3">Product</th>
+                            <th className="text-right px-5 py-3">MRR</th>
+                            <th className="text-right px-5 py-3">Setup</th>
+                            <th className="text-right px-5 py-3">Term</th>
+                            <th className="text-right px-5 py-3">Commission</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {frontHalfDeals.map((deal, i) => (
+                            <tr key={`f-${i}`} className={`border-b border-[#E5E7EB] hover:bg-[#F9FAFB] transition-colors ${i % 2 === 0 ? "bg-white" : "bg-[#F9FAFB]"}`}>
+                              <td className="px-5 py-3 text-[#6B7280]">{formatDate(deal.date)}</td>
+                              <td className="px-5 py-3 font-medium text-[#1F2937]">{deal.rep_name}</td>
+                              <td className="px-5 py-3 text-[#6B7280]">{deal.client}</td>
+                              <td className="px-5 py-3 text-[#6B7280]">{deal.dealer}</td>
+                              <td className="px-5 py-3 text-[#6B7280]">{deal.product}</td>
+                              <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(deal.monthly_price)}</td>
+                              <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(deal.setup_fee)}</td>
+                              <td className="px-5 py-3 text-right text-[#6B7280]">{deal.term} mo</td>
+                              <td className="px-5 py-3 text-right text-[#10B981] font-semibold">{formatCurrency(deal.commission.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Back Half */}
+                {backHalfDeals.length > 0 && (
+                  <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
+                    <div className="px-5 py-4 border-b border-[#E5E7EB]">
+                      <h2 className="text-lg font-semibold text-[#1F2937]">Back of Month (16th-End)</h2>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] text-xs uppercase tracking-wider">
+                            <th className="text-left px-5 py-3">Date</th>
+                            <th className="text-left px-5 py-3">Rep</th>
+                            <th className="text-left px-5 py-3">Client</th>
+                            <th className="text-left px-5 py-3">Dealer</th>
+                            <th className="text-left px-5 py-3">Product</th>
+                            <th className="text-right px-5 py-3">MRR</th>
+                            <th className="text-right px-5 py-3">Setup</th>
+                            <th className="text-right px-5 py-3">Term</th>
+                            <th className="text-right px-5 py-3">Commission</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {backHalfDeals.map((deal, i) => (
+                            <tr key={`b-${i}`} className={`border-b border-[#E5E7EB] hover:bg-[#F9FAFB] transition-colors ${i % 2 === 0 ? "bg-white" : "bg-[#F9FAFB]"}`}>
+                              <td className="px-5 py-3 text-[#6B7280]">{formatDate(deal.date)}</td>
+                              <td className="px-5 py-3 font-medium text-[#1F2937]">{deal.rep_name}</td>
+                              <td className="px-5 py-3 text-[#6B7280]">{deal.client}</td>
+                              <td className="px-5 py-3 text-[#6B7280]">{deal.dealer}</td>
+                              <td className="px-5 py-3 text-[#6B7280]">{deal.product}</td>
+                              <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(deal.monthly_price)}</td>
+                              <td className="px-5 py-3 text-right text-[#6B7280]">{formatCurrency(deal.setup_fee)}</td>
+                              <td className="px-5 py-3 text-right text-[#6B7280]">{deal.term} mo</td>
+                              <td className="px-5 py-3 text-right text-[#10B981] font-semibold">{formatCurrency(deal.commission.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {/* ===== ACTIVITY LOG TAB ===== */}
+        {activeTab === "Activity Log" && (
+          <>
+            {activityLogs.length === 0 ? (
+              <div className="rounded-xl bg-white border border-[#E5E7EB] p-12 text-center">
+                <p className="text-[#6B7280] text-sm">No activity logged yet by any rep.</p>
+              </div>
+            ) : (
+              <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-[#E5E7EB]">
+                  <h2 className="text-lg font-semibold text-[#1F2937]">Team Activity Log</h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[#6B7280] text-xs uppercase tracking-wider">
+                        <th className="text-left px-5 py-3">Date</th>
+                        <th className="text-left px-5 py-3">Rep</th>
+                        <th className="text-right px-5 py-3">Scheduled</th>
+                        <th className="text-right px-5 py-3">Shown</th>
+                        <th className="text-right px-5 py-3">Sold</th>
+                        <th className="text-right px-5 py-3">Revenue</th>
+                        <th className="text-right px-5 py-3">No Shows</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activityLogs.map((log, i) => (
+                        <tr key={log.id} className={`border-b border-[#E5E7EB] hover:bg-[#F9FAFB] transition-colors ${i % 2 === 0 ? "bg-white" : "bg-[#F9FAFB]"}`}>
+                          <td className="px-5 py-3 text-[#6B7280]">{formatDate(log.log_date)}</td>
+                          <td className="px-5 py-3 font-medium text-[#1F2937]">{log.rep_name}</td>
+                          <td className="px-5 py-3 text-right text-[#1F2937]">{log.scheduled_calls}</td>
+                          <td className="px-5 py-3 text-right text-[#1F2937]">{log.shown_calls}</td>
+                          <td className="px-5 py-3 text-right text-[#1F2937]">{log.sold_deals}</td>
+                          <td className="px-5 py-3 text-right text-[#1F2937]">{formatCurrency(log.revenue_collected)}</td>
+                          <td className="px-5 py-3 text-right text-[#1F2937]">{log.no_shows}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
