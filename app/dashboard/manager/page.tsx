@@ -305,7 +305,7 @@ export default function ManagerDashboard() {
     [repMonthlyMrr]
   );
 
-  if (loading || fetchLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-[#6B7280] text-lg">Loading...</div>
@@ -391,6 +391,12 @@ export default function ManagerDashboard() {
         {/* ===== EARNINGS TAB ===== */}
         {activeTab === "Earnings" && (
           <>
+            {fetchLoading ? (
+              <div className="rounded-xl bg-white border border-[#E5E7EB] p-12 text-center">
+                <p className="text-[#6B7280] text-sm">Loading earnings data...</p>
+              </div>
+            ) : (
+            <>
             {/* Earnings Graph */}
             <EarningsGraph deals={filteredDeals} getCommission={getCommission} />
 
@@ -598,14 +604,20 @@ export default function ManagerDashboard() {
               </div>
             </div>
           </>
+            )}
+          </>
         )}
 
         {/* ===== DEALS TAB ===== */}
         {activeTab === "Deals" && (
           <>
-            {dealsWithCommission.length === 0 ? (
+            {fetchLoading ? (
               <div className="rounded-xl bg-white border border-[#E5E7EB] p-12 text-center">
-                <p className="text-[#6B7280] text-sm">No deals found for this period.</p>
+                <p className="text-[#6B7280] text-sm">Loading deals...</p>
+              </div>
+            ) : dealsWithCommission.length === 0 ? (
+              <div className="rounded-xl bg-white border border-[#E5E7EB] p-12 text-center">
+                <p className="text-[#6B7280] text-sm">No deals found for this period. Reps can submit deals from their dashboard, or connect a Google Sheet in Manage Users.</p>
               </div>
             ) : (
               <>
@@ -700,7 +712,7 @@ export default function ManagerDashboard() {
           <>
             {activityLogs.length === 0 ? (
               <div className="rounded-xl bg-white border border-[#E5E7EB] p-12 text-center">
-                <p className="text-[#6B7280] text-sm">No activity logged yet by any rep.</p>
+                <p className="text-[#6B7280] text-sm">No activity logged yet. Reps can log daily activity from their dashboard.</p>
               </div>
             ) : (
               <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
